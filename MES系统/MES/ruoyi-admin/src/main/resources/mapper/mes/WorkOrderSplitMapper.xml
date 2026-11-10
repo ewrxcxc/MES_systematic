@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.WorkOrderSplitMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.WorkOrderSplit" id="SplitResult">
+        <id property="splitId" column="split_id"/>
+        <result property="parentWorkOrderId" column="parent_work_order_id"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="splitNo" column="split_no"/>
+        <result property="lineId" column="line_id"/>
+        <result property="lineName" column="line_name"/>
+        <result property="teamName" column="team_name"/>
+        <result property="splitQty" column="split_qty"/>
+        <result property="completedQty" column="completed_qty"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <select id="selectSplitList" resultMap="SplitResult">
+        select * from mes_work_order_split
+        <where>
+            <if test="parentWorkOrderId != null">and parent_work_order_id = #{parentWorkOrderId}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by split_id
+    </select>
+
+    <select id="selectSplitsByParentWorkOrderId" resultMap="SplitResult">
+        select * from mes_work_order_split where parent_work_order_id=#{parentWorkOrderId}
+    </select>
+
+    <select id="selectSplitById" resultMap="SplitResult">
+        select * from mes_work_order_split where split_id=#{splitId}
+    </select>
+
+    <insert id="insertWorkOrderSplit" useGeneratedKeys="true" keyProperty="splitId">
+        insert into mes_work_order_split(
+            <if test="parentWorkOrderId!=null">parent_work_order_id,</if>
+            <if test="workOrderId!=null">work_order_id,</if>
+            <if test="splitNo!=null and splitNo!=''">split_no,</if>
+            <if test="lineId!=null">line_id,</if>
+            <if test="lineName!=null and lineName!=''">line_name,</if>
+            <if test="teamName!=null and teamName!=''">team_name,</if>
+            <if test="splitQty!=null">split_qty,</if>
+            <if test="completedQty!=null">completed_qty,</if>
+            <if test="status!=null and status!=''">status,</if>
+            <if test="remark!=null and remark!=''">remark,</if>
+            <if test="createBy!=null and createBy!=''">create_by,</if>
+            create_time
+        ) values (
+            <if test="parentWorkOrderId!=null">#{parentWorkOrderId},</if>
+            <if test="workOrderId!=null">#{workOrderId},</if>
+            <if test="splitNo!=null and splitNo!=''">#{splitNo},</if>
+            <if test="lineId!=null">#{lineId},</if>
+            <if test="lineName!=null and lineName!=''">#{lineName},</if>
+            <if test="teamName!=null and teamName!=''">#{teamName},</if>
+            <if test="splitQty!=null">#{splitQty},</if>
+            <if test="completedQty!=null">#{completedQty},</if>
+            <if test="status!=null and status!=''">#{status},</if>
+            <if test="remark!=null and remark!=''">#{remark},</if>
+            <if test="createBy!=null and createBy!=''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateWorkOrderSplit">
+        update mes_work_order_split <set>
+            <if test="workOrderId!=null">work_order_id=#{workOrderId},</if>
+            <if test="lineId!=null">line_id=#{lineId},</if>
+            <if test="lineName!=null">line_name=#{lineName},</if>
+            <if test="teamName!=null">team_name=#{teamName},</if>
+            <if test="splitQty!=null">split_qty=#{splitQty},</if>
+            <if test="completedQty!=null">completed_qty=#{completedQty},</if>
+            <if test="status!=null">status=#{status},</if>
+            <if test="remark!=null">remark=#{remark},</if>
+            <if test="updateBy!=null and updateBy!=''">update_by=#{updateBy},</if>
+            update_time=sysdate()
+        </set> where split_id=#{splitId}
+    </update>
+
+    <delete id="deleteSplitByIds">
+        delete from mes_work_order_split where split_id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <delete id="deleteSplitsByParentWorkOrderId">
+        delete from mes_work_order_split where parent_work_order_id=#{parentWorkOrderId}
+    </delete>
+</mapper>

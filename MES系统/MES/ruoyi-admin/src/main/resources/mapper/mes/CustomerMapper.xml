@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.CustomerMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.Customer" id="CustomerResult">
+        <id property="customerId" column="customer_id"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="email" column="email"/>
+        <result property="address" column="address"/>
+        <result property="status" column="status"/>
+        <result property="customerPriority" column="customer_priority"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.vo.CustomerVO" id="CustomerVOResult">
+        <id property="customerId" column="customer_id"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="email" column="email"/>
+        <result property="address" column="address"/>
+        <result property="status" column="status"/>
+        <result property="customerPriority" column="customer_priority"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectCustomerVo">
+        select customer_id, customer_code, customer_name, contact_name, contact_phone,
+               email, address, status, customer_priority, remark, create_time, update_time
+        from customer
+    </sql>
+
+    <select id="selectCustomerList" parameterType="com.ruoyi.mes.dto.CustomerQueryDTO" resultMap="CustomerVOResult">
+        <include refid="selectCustomerVo"/>
+        <where>
+            <if test="customerCode != null and customerCode != ''">and customer_code like concat('%',#{customerCode},'%')</if>
+            <if test="customerName != null and customerName != ''">and customer_name like concat('%',#{customerName},'%')</if>
+            <if test="contactName != null and contactName != ''">and contact_name like concat('%',#{contactName},'%')</if>
+            <if test="contactPhone != null and contactPhone != ''">and contact_phone like concat('%',#{contactPhone},'%')</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by customer_priority asc, customer_id desc
+    </select>
+
+    <select id="selectCustomerById" parameterType="Long" resultMap="CustomerVOResult">
+        <include refid="selectCustomerVo"/> where customer_id = #{customerId}
+    </select>
+
+    <select id="selectCustomerEntityById" parameterType="Long" resultMap="CustomerResult">
+        select * from customer where customer_id = #{customerId}
+    </select>
+
+    <select id="selectCustomerByCode" parameterType="String" resultMap="CustomerResult">
+        select * from customer where customer_code = #{customerCode} limit 1
+    </select>
+
+    <select id="selectCustomerByName" parameterType="String" resultMap="CustomerResult">
+        select * from customer where customer_name = #{customerName} limit 1
+    </select>
+
+    <insert id="insertCustomer" parameterType="com.ruoyi.mes.domain.Customer" useGeneratedKeys="true" keyProperty="customerId">
+        insert into customer(
+            <if test="customerCode != null and customerCode != ''">customer_code,</if>
+            <if test="customerName != null and customerName != ''">customer_name,</if>
+            <if test="contactName != null and contactName != ''">contact_name,</if>
+            <if test="contactPhone != null and contactPhone != ''">contact_phone,</if>
+            <if test="email != null and email != ''">email,</if>
+            <if test="address != null and address != ''">address,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="customerPriority != null">customer_priority,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="customerCode != null and customerCode != ''">#{customerCode},</if>
+            <if test="customerName != null and customerName != ''">#{customerName},</if>
+            <if test="contactName != null and contactName != ''">#{contactName},</if>
+            <if test="contactPhone != null and contactPhone != ''">#{contactPhone},</if>
+            <if test="email != null and email != ''">#{email},</if>
+            <if test="address != null and address != ''">#{address},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="customerPriority != null">#{customerPriority},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateCustomer" parameterType="com.ruoyi.mes.domain.Customer">
+        update customer
+        <set>
+            <if test="customerCode != null and customerCode != ''">customer_code = #{customerCode},</if>
+            <if test="customerName != null and customerName != ''">customer_name = #{customerName},</if>
+            <if test="contactName != null">contact_name = #{contactName},</if>
+            <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="customerPriority != null">customer_priority = #{customerPriority},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where customer_id = #{customerId}
+    </update>
+
+    <delete id="deleteCustomerByIds">
+        delete from customer where customer_id in
+        <foreach collection="ids" item="customerId" open="(" separator="," close=")">#{customerId}</foreach>
+    </delete>
+
+</mapper>

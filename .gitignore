@@ -1,0 +1,29 @@
+# === 编译 / 运行产物 ===
+target/
+build/
+dist/
+*.class
+*.log
+logs/
+jar_temp/
+BOOT-INF/
+
+# === 运行时上传目录 / 临时文件 ===
+null/
+cp.txt
+plan_page_output.txt
+
+# === 本地工具与编辑器配置 ===
+.workbuddy-ai/
+.claude/
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.DS_Store
+Thumbs.db
+*.swp

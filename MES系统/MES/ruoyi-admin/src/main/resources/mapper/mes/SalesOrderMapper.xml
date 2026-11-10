@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.SalesOrderMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.SalesOrder" id="SalesOrderResult">
+        <id     property="orderId"         column="order_id"         />
+        <result property="orderNo"         column="order_no"         />
+        <result property="customerId"      column="customer_id"      />
+        <result property="customerName"   column="customer_name"    />
+        <result property="productId"       column="product_id"       />
+        <result property="productName"    column="product_name"     />
+        <result property="quantity"        column="quantity"         />
+        <result property="dueDate"         column="due_date"         />
+        <result property="consignee"       column="consignee"        />
+        <result property="consigneePhone"  column="consignee_phone"  />
+        <result property="deliveryAddress" column="delivery_address" />
+        <result property="orderStatus"     column="order_status"     />
+        <result property="deliveryStatus"  column="delivery_status"  />
+        <result property="isUrgent"        column="is_urgent"        />
+        <result property="createBy"        column="create_by"        />
+        <result property="createTime"      column="create_time"      />
+        <result property="updateBy"        column="update_by"        />
+        <result property="updateTime"      column="update_time"      />
+        <result property="remark"          column="remark"           />
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.vo.SalesOrderVO" id="SalesOrderVOResult">
+        <id     property="orderId"         column="order_id"         />
+        <result property="orderNo"         column="order_no"         />
+        <result property="customerId"      column="customer_id"      />
+        <result property="customerName"    column="customer_name"    />
+        <result property="productId"       column="product_id"       />
+        <result property="productName"     column="product_name"     />
+        <result property="quantity"        column="quantity"         />
+        <result property="dueDate"         column="due_date"         />
+        <result property="consignee"       column="consignee"        />
+        <result property="consigneePhone"  column="consignee_phone"  />
+        <result property="deliveryAddress" column="delivery_address" />
+        <result property="orderStatus"     column="order_status"     />
+        <result property="deliveryStatus"  column="delivery_status"  />
+        <result property="isUrgent"        column="is_urgent"        />
+        <result property="remark"          column="remark"           />
+        <result property="createTime"      column="create_time"      />
+        <result property="updateTime"      column="update_time"      />
+    </resultMap>
+
+    <sql id="selectSalesOrderVo">
+        select o.order_id, o.order_no, o.customer_id, c.customer_name,
+               o.product_id, p.product_name, o.quantity, o.due_date,
+               o.consignee, o.consignee_phone, o.delivery_address,
+               o.order_status, o.delivery_status, o.is_urgent, o.remark, o.create_time, o.update_time
+        from sales_order o
+        left join customer c on c.customer_id = o.customer_id
+        left join product p on p.product_id = o.product_id
+    </sql>
+
+    <select id="selectSalesOrderList" parameterType="com.ruoyi.mes.dto.SalesOrderQueryDTO" resultMap="SalesOrderVOResult">
+        <include refid="selectSalesOrderVo"/>
+        <where>
+            <if test="orderNo != null and orderNo != ''">
+                and o.order_no like concat('%', #{orderNo}, '%')
+            </if>
+            <if test="customerId != null">
+                and o.customer_id = #{customerId}
+            </if>
+            <if test="customerName != null and customerName != ''">
+                and c.customer_name like concat('%', #{customerName}, '%')
+            </if>
+            <if test="productId != null">
+                and o.product_id = #{productId}
+            </if>
+            <if test="productName != null and productName != ''">
+                and p.product_name like concat('%', #{productName}, '%')
+            </if>
+            <if test="orderStatus != null and orderStatus != ''">
+                and o.order_status = #{orderStatus}
+            </if>
+        </where>
+        order by o.order_id desc
+    </select>
+
+    <select id="selectSalesOrderById" parameterType="Long" resultMap="SalesOrderVOResult">
+        <include refid="selectSalesOrderVo"/>
+        where o.order_id = #{orderId}
+    </select>
+
+    <select id="selectSalesOrderEntityById" parameterType="Long" resultMap="SalesOrderResult">
+        select o.*, c.customer_name, p.product_name
+        from sales_order o
+        left join customer c on c.customer_id = o.customer_id
+        left join product p on p.product_id = o.product_id
+        where o.order_id = #{orderId}
+    </select>
+
+    <select id="selectSalesOrderByNo" parameterType="String" resultMap="SalesOrderResult">
+        select o.*, c.customer_name as customer_name, p.product_name as product_name
+        from sales_order o
+        left join customer c on c.customer_id = o.customer_id
+        left join product p on p.product_id = o.product_id
+        where o.order_no = #{orderNo} limit 1
+    </select>
+
+    <insert id="insertSalesOrder" parameterType="com.ruoyi.mes.domain.SalesOrder" useGeneratedKeys="true" keyProperty="orderId">
+        insert into sales_order(
+            <if test="orderNo != null and orderNo != ''">order_no,</if>
+            <if test="customerId != null">customer_id,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="quantity != null">quantity,</if>
+            <if test="dueDate != null">due_date,</if>
+            <if test="consignee != null and consignee != ''">consignee,</if>
+            <if test="consigneePhone != null and consigneePhone != ''">consignee_phone,</if>
+            <if test="deliveryAddress != null and deliveryAddress != ''">delivery_address,</if>
+            <if test="orderStatus != null and orderStatus != ''">order_status,</if>
+            <if test="deliveryStatus != null and deliveryStatus != ''">delivery_status,</if>
+            <if test="isUrgent != null">is_urgent,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="orderNo != null and orderNo != ''">#{orderNo},</if>
+            <if test="customerId != null">#{customerId},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="quantity != null">#{quantity},</if>
+            <if test="dueDate != null">#{dueDate},</if>
+            <if test="consignee != null and consignee != ''">#{consignee},</if>
+            <if test="consigneePhone != null and consigneePhone != ''">#{consigneePhone},</if>
+            <if test="deliveryAddress != null and deliveryAddress != ''">#{deliveryAddress},</if>
+            <if test="orderStatus != null and orderStatus != ''">#{orderStatus},</if>
+            <if test="deliveryStatus != null and deliveryStatus != ''">#{deliveryStatus},</if>
+            <if test="isUrgent != null">#{isUrgent},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateSalesOrder" parameterType="com.ruoyi.mes.domain.SalesOrder">
+        update sales_order
+        <set>
+            <if test="customerId != null">customer_id = #{customerId},</if>
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="dueDate != null">due_date = #{dueDate},</if>
+            <if test="consignee != null">consignee = #{consignee},</if>
+            <if test="consigneePhone != null">consignee_phone = #{consigneePhone},</if>
+            <if test="deliveryAddress != null">delivery_address = #{deliveryAddress},</if>
+            <if test="orderStatus != null">order_status = #{orderStatus},</if>
+            <if test="deliveryStatus != null">delivery_status = #{deliveryStatus},</if>
+            <if test="isUrgent != null">is_urgent = #{isUrgent},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where order_id = #{orderId}
+    </update>
+
+    <select id="selectShipDataByOrderId" parameterType="Long" resultMap="SalesOrderVOResult">
+        select o.order_id, o.order_no, c.customer_name, p.product_name, o.quantity
+        from sales_order o
+        left join customer c on c.customer_id = o.customer_id
+        left join product p on p.product_id = o.product_id
+        where o.order_id = #{orderId}
+    </select>
+
+    <delete id="deleteSalesOrderByIds">
+        delete from sales_order where order_id in
+        <foreach collection="ids" item="orderId" open="(" separator="," close=")">
+            #{orderId}
+        </foreach>
+    </delete>
+
+</mapper>

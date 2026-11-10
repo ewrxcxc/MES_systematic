@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('生产报工')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <form id="edit-form" class="form-horizontal" style="padding:0;">
+            <input type="hidden" name="reportId" id="reportId"/>
+            <div class="form-card">
+                <div class="form-card-header">基础信息</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">工单：</label>
+                <div class="col-sm-4">
+                    <select name="workOrderId" id="workOrderId" class="form-control" required>
+                        <option value="">请选择工单</option>
+                    </select>
+                </div>
+                <label class="col-sm-2 control-label">工序：</label>
+                <div class="col-sm-4">
+                    <select name="processSeq" id="processSeq" class="form-control" required>
+                        <option value="">请先选择工单</option>
+                    </select>
+                    <input type="hidden" name="processName" id="processName"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">设备：</label>
+                <div class="col-sm-4">
+                    <select name="equipmentId" id="equipmentId" class="form-control" required>
+                        <option value="">请选择设备</option>
+                    </select>
+                </div>
+                <label class="col-sm-2 control-label">操作员：</label>
+                <div class="col-sm-4">
+                    <select name="operatorId" id="operatorId" class="form-control">
+                        <option value="">请选择操作员</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">产品名称：</label>
+                <div class="col-sm-4"><p class="form-control-static" id="woProductName">-</p></div>
+                <label class="col-sm-2 control-label">产品编码：</label>
+                <div class="col-sm-4"><p class="form-control-static" id="woProductCode">-</p></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">计划数量：</label>
+                <div class="col-sm-4"><p class="form-control-static" id="woPlannedQty">-</p></div>
+                <label class="col-sm-2 control-label">已完工数量：</label>
+                <div class="col-sm-4"><p class="form-control-static" id="woCompletedQty">-</p></div>
+            </div>
+                </div>
+            </div>
+            <div class="form-card" style="margin-top:10px;">
+                <div class="form-card-header">报工数据</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">完成数量：</label>
+                <div class="col-sm-4">
+                    <input type="number" name="goodQty" id="goodQty" class="form-control" required min="0" value="0"/>
+                </div>
+                <label class="col-sm-2 control-label">不良数量：</label>
+                <div class="col-sm-4">
+                    <input type="number" name="badQty" id="badQty" class="form-control" required min="0" value="0"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">报工类型：</label>
+                <div class="col-sm-4">
+                    <select name="reportType" id="reportType" class="form-control">
+                        <option value="NORMAL">普通报工</option>
+                        <option value="REPAIR">补报</option>
+                    </select>
+                </div>
+                <label class="col-sm-2 control-label">报工时间：</label>
+                <div class="col-sm-4">
+                    <input type="text" name="reportTime" id="reportTime" class="form-control time-input"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">备注：</label>
+                <div class="col-sm-10">
+                    <textarea name="remark" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+            </div>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/report"; var apiPrefix = ctx + "api/mes/report";
+        var woDataCache = {}; // workOrderId -> WorkOrderVO
+        var processDataCache = {}; // workOrderId -> [{taskId, processSeq, processName, status, ...}]
+        var editMode = false;
+        var editReportId = [[${reportId != null ? reportId : 0}]];
+
+        $(function() {
+            if (editReportId > 0) {
+                editMode = true;
+                $("#reportId").val(editReportId);
+                loadReportData(editReportId);
+            }
+            loadWorkOrderList();
+            loadEquipmentList();
+            loadOperatorList();
+            // 默认报工时间
+            var now = new Date();
+            $("#reportTime").val(now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-'
+                + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':'
+                + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0'));
+        });
+
+        /** 编辑模式：加载已有报工数据 */
+        function loadReportData(reportId) {
+            $.get(apiPrefix + "/" + reportId, function(res) {
+                if (res.code == 0 && res.data) {
+                    var d = res.data;
+                    // 缓存工单数据
+                    woDataCache[d.workOrderId] = { workOrderId: d.workOrderId, workOrderNo: d.workOrderNo,
+                        productName: d.productName, productCode: '', plannedQty: 0, completedQty: 0, status: '' };
+                    // 设置工单下拉
+                    $("#workOrderId").append('<option value="' + d.workOrderId + '" selected>' + d.workOrderNo + '</option>');
+                    displayWorkOrderInfo(woDataCache[d.workOrderId]);
+                    // 加载工序
+                    loadProcessTasks(d.workOrderId, function() {
+                        $("#processSeq").val(d.processSeq);
+                        $("#processName").val(d.processName);
+                    });
+                    // 设置设备
+                    if (d.equipmentId) $("#equipmentId").val(d.equipmentId);
+                    // 设置操作员
+                    if (d.operatorId) $("#operatorId").val(d.operatorId);
+                    // 填报表单
+                    $("#goodQty").val(d.goodQty || 0);
+                    $("#badQty").val(d.badQty || 0);
+                    $("#reportType").val(d.reportType || 'NORMAL');
+                    if (d.reportTime) {
+                        var t = new Date(d.reportTime);
+                        $("#reportTime").val(t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-'
+                            + String(t.getDate()).padStart(2,'0') + ' ' + String(t.getHours()).padStart(2,'0') + ':'
+                            + String(t.getMinutes()).padStart(2,'0') + ':' + String(t.getSeconds()).padStart(2,'0'));
+                    }
+                    if (d.remark) $("textarea[name='remark']").val(d.remark);
+                    // 编辑模式禁用工单变更
+                    $("#workOrderId").prop('disabled', true);
+                }
+            });
+        }
+
+        /** 加载工单下拉 */
+        function loadWorkOrderList() {
+            if (editMode) return; // 编辑模式已设置
+            $.ajax({
+                url: ctx + "api/mes/workorder/list", type: 'POST', data: { pageSize: 999 }, dataType: 'json',
+                success: function(res) {
+                    if (res.code == 0 && res.rows) {
+                        var $sel = $("#workOrderId");
+                        $(res.rows).each(function(i, wo) {
+                            woDataCache[wo.workOrderId] = wo;
+                            $sel.append('<option value="' + wo.workOrderId + '">' + wo.workOrderNo + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        /** 加载设备下拉 */
+        function loadEquipmentList() {
+            $.ajax({
+                url: ctx + "api/mes/equipment/list", type: 'POST', data: { pageSize: 999 }, dataType: 'json',
+                success: function(res) {
+                    if (res.code == 0 && res.rows) {
+                        var $sel = $("#equipmentId");
+                        $(res.rows).each(function(i, eq) {
+                            $sel.append('<option value="' + eq.equipmentId + '">' + eq.equipmentName + ' [' + eq.equipmentCode + ']</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        /** 加载操作员下拉 */
+        function loadOperatorList() {
+            $.ajax({
+                url: ctx + "system/user/list", type: 'POST', data: { pageSize: 999 }, dataType: 'json',
+                success: function(res) {
+                    if (res.code == 0 && res.rows) {
+                        var $sel = $("#operatorId");
+                        $(res.rows).each(function(i, u) {
+                            $sel.append('<option value="' + u.userId + '">' + (u.userName || u.loginName) + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        /** 工单选择变更 */
+        $("#workOrderId").change(function() {
+            var woId = $(this).val();
+            if (!woId) { clearWorkOrderInfo(); resetProcessSelect(); return; }
+            var wo = woDataCache[woId];
+            if (wo) displayWorkOrderInfo(wo);
+            loadProcessTasks(woId);
+            if (wo && wo.plannedQty) $("#goodQty").val(wo.plannedQty);
+        });
+
+        /** 工序选择变更：同步 processName */
+        $("#processSeq").change(function() {
+            var txt = $("#processSeq option:selected").text();
+            // 去掉工序名后面的 [状态] 部分
+            var name = txt.replace(/\s*\[.*\]\s*$/, '').trim();
+            $("#processName").val(name);
+        });
+
+        function displayWorkOrderInfo(wo) {
+            var smap = {'WAITING':'待生产','READY':'就绪','RUNNING':'生产中','FINISHED':'已完成','PAUSED':'暂停'};
+            var cmap = {'WAITING':'info','READY':'primary','RUNNING':'warning','FINISHED':'success','PAUSED':'default'};
+            $("#woProductName").text(wo.productName || '-');
+            $("#woProductCode").text(wo.productCode || '-');
+            $("#woPlannedQty").text(wo.plannedQty || 0);
+            $("#woCompletedQty").text(wo.completedQty || 0);
+            $("#woStatus").html('<span class="label label-' + (cmap[wo.status]||'default') + '">' + (smap[wo.status]||wo.status) + '</span>');
+        }
+
+        function clearWorkOrderInfo() {
+            $("#woProductName,#woProductCode,#woPlannedQty,#woCompletedQty").text('-');
+            $("#woStatus").html('-'); $("#goodQty").val(0);
+        }
+
+        function resetProcessSelect() {
+            var $sel = $("#processSeq");
+            $sel.empty().append('<option value="">请先选择工单</option>');
+        }
+
+        function loadProcessTasks(workOrderId, callback) {
+            var $sel = $("#processSeq");
+            $sel.empty().append('<option value="">加载中...</option>');
+            $.ajax({
+                url: ctx + "api/mes/process/tasks/" + workOrderId, type: 'GET', dataType: 'json',
+                success: function(res) {
+                    $sel.empty().append('<option value="">请选择工序</option>');
+                    if (res.code == 0) {
+                        var tasks = [];
+                        if (Array.isArray(res.data)) tasks = res.data;
+                        else if (res.tasks) tasks = res.tasks;
+                        else if (res.data && res.data.tasks) tasks = res.data.tasks;
+                        var smap = {'FINISHED':'已完成','RUNNING':'进行中','READY':'待开始','WAITING':'等待中'};
+                        processDataCache[workOrderId] = tasks;
+                        $(tasks).each(function(i, t) {
+                            var s = (t.status||'').toUpperCase();
+                            var statusLabel = smap[s] || s;
+                            $sel.append('<option value="' + t.processSeq + '">'
+                                + t.processName + ' [' + statusLabel + ']</option>');
+                        });
+                    }
+                    if (callback) callback();
+                },
+                error: function() { $sel.empty().append('<option value="">工序加载失败</option>'); }
+            });
+        }
+
+        /** 提交报工 */
+        function submitHandler() {
+            var workOrderId = $("#workOrderId").val();
+            var processSeq = $("#processSeq").val();
+            var processName = $("#processName").val();
+            var equipmentId = $("#equipmentId").val();
+            var operatorId = $("#operatorId").val();
+            var goodQty = parseInt($("#goodQty").val()) || 0;
+            var badQty = parseInt($("#badQty").val()) || 0;
+            var reportType = $("#reportType").val();
+            var reportTime = $("#reportTime").val();
+            var remark = $("textarea[name='remark']").val();
+
+            if (!workOrderId) { $.modal.msgWarning("请选择工单喵~"); return; }
+            if (!processSeq) { $.modal.msgWarning("请选择工序喵~"); return; }
+            if (!equipmentId) { $.modal.msgWarning("请选择设备喵~"); return; }
+            if (goodQty <= 0 && badQty <= 0) { $.modal.msgWarning("完成数量或不良数量至少填写一个喵~"); return; }
+
+            var data = {
+                workOrderId: parseInt(workOrderId),
+                equipmentId: parseInt(equipmentId),
+                operatorId: operatorId ? parseInt(operatorId) : null,
+                goodQty: goodQty,
+                badQty: badQty,
+                processSeq: parseInt(processSeq),
+                processName: processName || ('工序' + processSeq),
+                reportType: reportType || 'NORMAL',
+                reportTime: reportTime,
+                remark: remark || ''
+            };
+
+            var url = editMode ? (apiPrefix + "/update") : (apiPrefix + "/create");
+            if (editMode) data.reportId = editReportId;
+
+            $.ajax({
+                url: url, type: 'POST', contentType: 'application/json', data: JSON.stringify(data),
+                success: function(res) {
+                    if (res.code == 0) {
+                        $.modal.msgSuccess(editMode ? "修改成功喵~" : "报工成功喵~");
+                        $.modal.close();
+                    } else {
+                        $.modal.msgError(res.msg || "操作失败喵~");
+                    }
+                },
+                error: function(xhr) {
+                    var msg = "系统错误喵~";
+                    try { var resp = JSON.parse(xhr.responseText); if (resp && resp.msg) msg = resp.msg; } catch(e) {}
+                    $.modal.msgError(msg);
+                }
+            });
+        }
+
+        function resetForm() { $("#edit-form")[0].reset(); }
+    </script>
+</body>
+</html>

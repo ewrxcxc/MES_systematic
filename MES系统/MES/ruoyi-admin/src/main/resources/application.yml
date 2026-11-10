@@ -1,0 +1,88 @@
+# MES制造执行系统配置
+ruoyi:
+  name: MES
+  version: 1.0.0
+  copyrightYear: 2026
+  demoEnabled: false
+  profile: D:/mes/uploadPath
+  addressEnabled: false
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    uri-encoding: UTF-8
+    accept-count: 1000
+    threads:
+      max: 800
+      min-spare: 100
+
+logging:
+  level:
+    com.ruoyi: debug
+    org.springframework: warn
+
+user:
+  password:
+    maxRetryCount: 5
+
+spring:
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  thymeleaf:
+    mode: HTML
+    encoding: utf-8
+    cache: false
+  messages:
+    basename: static/i18n/messages
+  profiles:
+    active: druid
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+
+mybatis:
+  typeAliasesPackage: com.ruoyi.**.domain
+  mapperLocations: classpath*:mapper/**/*Mapper.xml
+  configLocation: classpath:mybatis/mybatis-config.xml
+
+pagehelper:
+  helperDialect: mysql
+  supportMethodsArguments: true
+  params: count=countSql
+
+shiro:
+  user:
+    loginUrl: /login
+    unauthorizedUrl: /unauth
+    indexUrl: /index
+    captchaEnabled: true
+    captchaType: math
+  cookie:
+    domain:
+    path: /
+    httpOnly: true
+    maxAge: 30
+    cipherKey:
+  session:
+    expireTime: 30
+    dbSyncPeriod: 1
+    validationInterval: 10
+    maxSession: -1
+    kickoutAfter: false
+  rememberMe:
+    enabled: true
+
+mes:
+  # 设备API配置
+  equipment:
+    api:
+      base-url: http://localhost:5000
+
+# DeepSeek AI配置
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  url: https://api.deepseek.com/v1/chat/completions

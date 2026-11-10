@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('工序-产线-API映射')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>工序名称：<input type="text" name="processName"/></li>
+                <li>设备名称：<input type="text" name="equipmentName"/></li>
+                <li>工作中心：<input type="text" name="workCenter"/></li>
+                <li>产线动作：<input type="text" name="lineAction"/></li>
+                <li>状态：<select name="status">
+                    <option value="">全部</option>
+                    <option value="ACTIVE">启用</option>
+                    <option value="INACTIVE">停用</option>
+                </select></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success btn-rounded" onclick="$.operate.addTab()"><i class="fa fa-plus"></i> 新增映射</a>
+            <a class="btn btn-primary btn-rounded multiple disabled" onclick="batchEnable()"><i class="fa fa-play-circle"></i> 批量启用</a>
+            <a class="btn btn-warning btn-rounded multiple disabled" onclick="batchDisable()"><i class="fa fa-pause-circle"></i> 批量停用</a>
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="batchDelete()"><i class="fa fa-remove"></i> 批量删除</a>
+            <a class="btn btn-info btn-rounded" onclick="refreshStatus()"><i class="fa fa-refresh"></i> 刷新状态</a>
+            <a class="btn btn-warning btn-rounded" onclick="openSimulation()"><i class="fa fa-sitemap"></i> 流程模拟</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+
+        <div class="col-sm-12" style="margin-top:15px;">
+            <div class="panel panel-info">
+                <div class="panel-heading"><i class="fa fa-info-circle"></i> 功能说明</div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <div class="info-box"><span class="info-box-icon bg-blue"><i class="fa fa-cog"></i></span>
+                                <div class="info-box-content"><span class="info-box-text">工序-产线-API映射</span>
+                                    <span class="info-box-number">管理工序与设备产线之间的API接口映射关系喵~</span></div>
+                            </div>
+                        </div>
+                        <div class="col-sm-3">
+                            <div class="info-box"><span class="info-box-icon bg-green"><i class="fa fa-exchange"></i></span>
+                                <div class="info-box-content"><span class="info-box-text">API连接测试</span>
+                                    <span class="info-box-number">点击操作栏"测试"按钮可验证API连通性喵~</span></div>
+                            </div>
+                        </div>
+                        <div class="col-sm-3">
+                            <div class="info-box"><span class="info-box-icon bg-orange"><i class="fa fa-toggle-on"></i></span>
+                                <div class="info-box-content"><span class="info-box-text">状态管理</span>
+                                    <span class="info-box-number">启用/停用控制映射是否生效喵~</span></div>
+                            </div>
+                        </div>
+                        <div class="col-sm-3">
+                            <div class="info-box"><span class="info-box-icon bg-yellow"><i class="fa fa-sitemap"></i></span>
+                                <div class="info-box-content"><span class="info-box-text">流程模拟</span>
+                                    <span class="info-box-number">模拟完整工单工序流程喵~</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div></div>
+
+    <!-- 流程模拟弹窗 — 工业风控制台 -->
+    <div class="modal fade" id="simulationModal" tabindex="-1"><div class="modal-dialog" style="width:900px;"><div class="modal-content" style="background:#1a1d23;color:#cdd2d8;border:1px solid #333842;">
+        <div class="modal-header" style="background:#21252b;border-bottom:1px solid #333842;">
+            <button type="button" class="close" data-dismiss="modal" style="color:#6a7078;opacity:1;">&times;</button>
+            <h4 class="modal-title" style="color:#cdd2d8;font-weight:700;letter-spacing:1px;">
+                <span style="color:#0099ff;">MES</span> 产线工序控制台
+                <small id="simWorkOrder" style="color:#6a7078;margin-left:12px;"></small>
+            </h4>
+        </div>
+        <div class="modal-body" style="padding:20px;">
+            <!-- 状态条 -->
+            <div style="display:flex;gap:24px;font-size:13px;color:#6a7078;margin-bottom:16px;padding:0 4px;">
+                <span>总请求：<b id="simCountTotal" style="color:#cdd2d8;">0</b></span>
+                <span>成功：<b id="simCountOk" style="color:#2ecc71;">0</b></span>
+                <span>失败：<b id="simCountFail" style="color:#e74c3c;">0</b></span>
+                <span class="pull-right">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ecc71;margin-right:4px;" id="simDot"></span>
+                    <span id="simStatus">就绪</span>
+                </span>
+            </div>
+
+            <!-- 按钮网格 -->
+            <div id="simBtnGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;"></div>
+
+            <!-- 操作按钮 -->
+            <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
+                <button class="btn btn-xs" onclick="simRunAll()"
+                    style="background:#0099ff;color:#fff;border:none;padding:5px 16px;border-radius:3px;font-weight:600;">
+                    <i class="fa fa-forward"></i> 自动执行全部</button>
+                <button class="btn btn-xs" onclick="simStop()"
+                    style="background:#e67e22;color:#fff;border:none;padding:5px 16px;border-radius:3px;font-weight:600;">
+                    <i class="fa fa-stop"></i> 停止</button>
+                <button class="btn btn-xs" onclick="simReset()"
+                    style="background:#3a3d44;color:#cdd2d8;border:1px solid #444;padding:5px 16px;border-radius:3px;">
+                    <i class="fa fa-refresh"></i> 重置</button>
+                <span style="flex:1;"></span>
+                <label style="margin:0;font-size:12px;color:#6a7078;cursor:pointer;">
+                    <input type="checkbox" id="simDemoChk" checked onchange="toggleDemoMode()" style="vertical-align:middle;margin-right:3px;"> 演示模式
+                </label>
+            </div>
+
+            <!-- 日志区 -->
+            <div style="background:#181a1f;border:1px solid #333842;border-radius:4px;height:220px;overflow-y:auto;padding:10px 14px;font-family:Consolas,'Microsoft YaHei',monospace;font-size:12px;line-height:1.8;" id="simLog">
+                <div style="color:#6a7078;">等待指令...</div>
+            </div>
+        </div>
+    </div></div></div>
+
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/mapping"; var apiPrefix = ctx + "api/mes/mapping";
+
+        // 工序自动补全映射表
+        var autoFillMap = {
+            '原材料领料': { lineAction:'启动初始化', apiCommand:'start', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=start', workCenter:'注塑车间' },
+            'CNC加工':   { lineAction:'启动传送带', apiCommand:'sendstart', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=sendstart', workCenter:'CNC加工中心' },
+            '打磨处理':   { lineAction:'停止传送带', apiCommand:'sendstop', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=sendstop', workCenter:'打磨工位' },
+            '喷砂氧化':   { lineAction:'抓取盒子到平台', apiCommand:'startgrab', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=startgrab', workCenter:'表面处理区' },
+            '组装':       { lineAction:'抓取盒子到传送带', apiCommand:'startgrabBack', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=startgrabBack', workCenter:'装配车间' },
+            '功能检测':   { lineAction:'开始打螺丝', apiCommand:'startcrue', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=startcrue', workCenter:'质检区' },
+            '包装入库':   { lineAction:'开始激光打标', apiCommand:'startlay', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=startlay', workCenter:'包装车间' }
+        };
+
+        // 默认7步模拟流程（表格为空时使用）
+        var defaultSimSteps = [
+            { processName:'原材料领料', apiCommand:'start', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=start', processSeq:10 },
+            { processName:'CNC加工',   apiCommand:'sendstart', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=sendstart', processSeq:20 },
+            { processName:'打磨处理',   apiCommand:'sendstop', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=sendstop', processSeq:30 },
+            { processName:'喷砂氧化',   apiCommand:'startgrab', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=startgrab', processSeq:40 },
+            { processName:'组装',       apiCommand:'startgrabBack', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=startgrabBack', processSeq:50 },
+            { processName:'功能检测',   apiCommand:'startcrue', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=startcrue', processSeq:60 },
+            { processName:'包装入库',   apiCommand:'startlay', apiUrl:'http://localhost:5000/WeatherForecast/command?commandname=startlay', processSeq:70 }
+        ];
+
+        $(function() {
+            $.table.init({
+                url: apiPrefix + "/list", createUrl: prefix + "/add", updateUrl: prefix + "/edit/{id}",
+                removeUrl: apiPrefix + "/delete", sortName: "processSeq", sortOrder: "asc", striped: true,
+                modalName: "工序-产线-API映射", toolbar: "toolbar",
+                columns: [
+                    { checkbox: true },
+                    { field: 'id', visible: false },
+                    { field: 'processSeq', title: '序号', sortable: true, align: 'center', width: 60 },
+                    { field: 'processName', title: '工序名称', sortable: true },
+                    { field: 'workCenter', title: '工作中心', sortable: true,
+                        formatter: function(v, r) { return v || (autoFillMap[r.processName]||{}).workCenter || '-'; }
+                    },
+                    { field: 'equipmentName', title: '设备名称',
+                        formatter: function(v, r) { return (v||'-') + ' <small class="text-muted">[' + (r.equipmentCode||'') + ']</small>'; }
+                    },
+                    { field: 'lineAction', title: '产线动作',
+                        formatter: function(v, r) { return v || (autoFillMap[r.processName]||{}).lineAction || '-'; }
+                    },
+                    { field: 'apiCommand', title: 'API命令', align: 'center',
+                        formatter: function(v, r) {
+                            var cmd = v || (autoFillMap[r.processName]||{}).apiCommand || '-';
+                            return '<code>' + cmd + '</code>';
+                        }
+                    },
+                    { field: 'apiUrl', title: 'API地址',
+                        formatter: function(v, r) {
+                            var url = v || (autoFillMap[r.processName]||{}).apiUrl || '-';
+                            return '<small>' + url + '</small>';
+                        }
+                    },
+                    { field: 'status', title: '状态', align: 'center', width: 70,
+                        formatter: function(v, r) {
+                            if (v == 'ACTIVE') {
+                                return '<span class="label label-success" style="cursor:pointer;" onclick="toggleStatus(' + r.id + ',\'INACTIVE\')" title="点击停用">启用</span>';
+                            }
+                            return '<span class="label label-default" style="cursor:pointer;" onclick="toggleStatus(' + r.id + ',\'ACTIVE\')" title="点击启用">停用</span>';
+                        }
+                    },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            return '<a class="btn btn-primary btn-xs" onclick="$.operate.editTab(\'' + r.id + '\')"><i class="fa fa-edit"></i> 编辑</a> '
+                                + '<a class="btn btn-info btn-xs" onclick="testConnection(\'' + r.id + '\')"><i class="fa fa-plug"></i> 测试</a> '
+                                + '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + r.id + '\')"><i class="fa fa-remove"></i> 删除</a>';
+                        }
+                    }
+                ]
+            });
+        });
+
+        function resetForm() { $("#search-form")[0].reset(); $.table.refresh(); }
+
+        function toggleStatus(id, newStatus) {
+            var action = newStatus == 'ACTIVE' ? '启用' : '停用';
+            $.modal.confirm("确定要" + action + "该映射吗喵~", function() {
+                var url = apiPrefix + (newStatus == 'ACTIVE' ? "/batchEnable" : "/batchDisable");
+                $.post(url, { ids: id + '' }, function(res) {
+                    if (res.code == 0) {
+                        $.modal.msgSuccess(action + "成功喵~");
+                        $.table.refresh();
+                    } else {
+                        $.modal.msgError(res.msg || "操作失败喵~");
+                    }
+                });
+            });
+        }
+
+        function testConnection(id) {
+            $.modal.confirm("确定要测试该映射的API连接吗喵~", function() {
+                $.modal.loading("正在测试连接喵~");
+                $.post(apiPrefix + "/testConnection/" + id, function(res) {
+                    $.modal.closeLoading();
+                    if (res.code == 0 && res.data) {
+                        var d = res.data;
+                        var msg = 'HTTP ' + (d.httpCode || 0) + ' | 响应时间: ' + (d.responseTime || '?') + 'ms';
+                        if (d.success) {
+                            if (d.responseTime < 500) msg += '\n\n连接状态优秀喵~';
+                            else if (d.responseTime < 2000) msg += '\n\n连接状态一般喵~';
+                            else msg += '\n\n连接响应较慢喵~';
+                            $.modal.alertSuccess(msg);
+                        } else {
+                            msg += '\n\n' + (d.msg || '连接异常喵~');
+                            $.modal.alertWarning(msg);
+                        }
+                    } else {
+                        $.modal.alertError(res.msg || "测试失败喵~");
+                    }
+                    $.table.refresh();
+                }).fail(function() {
+                    $.modal.closeLoading();
+                    $.modal.alertError("无法连接API服务喵~");
+                });
+            });
+        }
+
+        function batchEnable() {
+            var rows = $.table.selectFirstColumns();
+            if (rows.length == 0) { $.modal.msgWarning("请选择要启用的映射喵~"); return; }
+            $.modal.confirm("确定要启用选中的 " + rows.length + " 条映射吗喵~", function() {
+                $.operate.submit(apiPrefix + "/batchEnable", "ids=" + rows.join(), null, true);
+            });
+        }
+
+        function batchDisable() {
+            var rows = $.table.selectFirstColumns();
+            if (rows.length == 0) { $.modal.msgWarning("请选择要停用的映射喵~"); return; }
+            $.modal.confirm("确定要停用选中的 " + rows.length + " 条映射吗喵~", function() {
+                $.operate.submit(apiPrefix + "/batchDisable", "ids=" + rows.join(), null, true);
+            });
+        }
+
+        function batchDelete() {
+            var rows = $.table.selectFirstColumns();
+            if (rows.length == 0) { $.modal.msgWarning("请选择要删除的映射喵~"); return; }
+            $.operate.removeAll();
+        }
+
+        function refreshStatus() {
+            $.modal.confirm("确定要清空所有映射的测试记录吗喵~", function() {
+                $.modal.loading("正在刷新喵~");
+                $.post(apiPrefix + "/refreshStatus", function(res) {
+                    $.modal.closeLoading();
+                    if (res.code == 0) {
+                        $.modal.msgSuccess("状态已刷新喵~");
+                        $.table.refresh();
+                    } else {
+                        $.modal.msgError(res.msg || "刷新失败喵~");
+                    }
+                });
+            });
+        }
+
+        // ==================== 流程模拟 — 工业风控制台 ====================
+        var simData = [];
+        var simIndex = 0;
+        var simRunning = false;
+        var simStopFlag = false;
+        var simCounts = { total: 0, ok: 0, fail: 0 };
+
+        function toggleDemoMode() {
+            var chk = document.getElementById('simDemoChk');
+            simLog(chk.checked ? '◆ 切换为演示模式（模拟返回结果）' : '◆ 切换为真实调用模式（将实际请求API接口）', '#f0a030');
+        }
+
+        function openSimulation() {
+            var tableData = $('#bootstrap-table').bootstrapTable('getData');
+            if (tableData && tableData.length > 0) {
+                simData = [];
+                $(tableData).each(function(i, r) {
+                    var fill = autoFillMap[r.processName] || {};
+                    simData.push({
+                        id: r.id,
+                        processName: r.processName,
+                        lineAction: r.lineAction || fill.lineAction || r.processName,
+                        apiCommand: r.apiCommand || fill.apiCommand || '-',
+                        apiUrl: r.apiUrl || fill.apiUrl || '-',
+                        processSeq: r.processSeq || i * 10
+                    });
+                });
+                simData.sort(function(a, b) { return (a.processSeq||0) - (b.processSeq||0); });
+            } else {
+                $.modal.msgWarning("暂无映射配置，请先新增映射喵~");
+                simData = JSON.parse(JSON.stringify(defaultSimSteps));
+                $(simData).each(function(i, d) {
+                    d.lineAction = autoFillMap[d.processName] ? autoFillMap[d.processName].lineAction : d.processName;
+                });
+            }
+
+            simIndex = 0; simRunning = false; simStopFlag = false;
+            simCounts = { total: 0, ok: 0, fail: 0 };
+            updateSimCounts();
+
+            var now = new Date();
+            var wo = 'WO-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0')
+                + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*9000+1000));
+            $("#simWorkOrder").text(wo);
+            $("#simLog").html('<div style="color:#6a7078;">[系统] 工单 ' + wo + ' 模拟已就绪，共 ' + simData.length + ' 道工序喵~</div>');
+            $("#simStatus").text('就绪');
+            $("#simDot").css('background', '#2ecc71');
+            $("#simDemoChk").prop('checked', true);
+
+            renderSimButtons();
+            $("#simulationModal").modal("show");
+        }
+
+        function renderSimButtons() {
+            var html = '';
+            for (var i = 0; i < simData.length; i++) {
+                var d = simData[i];
+                var cls = 'sim-btn-pending', icon = '', disabled = '';
+                if (d._status == 'running') { cls = 'sim-btn-running'; icon = '<i class="fa fa-spinner fa-spin" style="position:absolute;top:6px;right:10px;font-size:11px;color:#f0a030;"></i>'; disabled = 'disabled'; }
+                else if (d._status == 'success') { cls = 'sim-btn-success'; icon = '<i class="fa fa-check" style="position:absolute;top:6px;right:10px;font-size:11px;color:#2ecc71;"></i>'; }
+                else if (d._status == 'fail') { cls = 'sim-btn-fail'; icon = '<i class="fa fa-times" style="position:absolute;top:6px;right:10px;font-size:11px;color:#e74c3c;"></i>'; }
+
+                html += '<div class="sim-cmd-btn ' + cls + '" onclick="simRunSingle(' + i + ')" ' + disabled + '>';
+                html +=   icon;
+                html +=   '<span class="sim-btn-seq">' + String(i+1).padStart(2,'0') + '</span>';
+                html +=   '<span class="sim-btn-action">' + (d.lineAction || d.processName) + '</span>';
+                html +=   '<span class="sim-btn-process">' + d.processName + '</span>';
+                if (d._status == 'success') html += '<span class="sim-btn-resp">' + (d._respTime||'?') + 'ms</span>';
+                if (d._status == 'fail') html += '<span class="sim-btn-resp" style="color:#e74c3c;">失败</span>';
+                html += '</div>';
+            }
+            $('#simBtnGrid').html(html);
+        }
+
+        function updateSimCounts() {
+            $('#simCountTotal').text(simCounts.total);
+            $('#simCountOk').text(simCounts.ok);
+            $('#simCountFail').text(simCounts.fail);
+        }
+
+        function simLog(msg, color) {
+            color = color || '#cdd2d8';
+            var now = new Date();
+            var time = now.toTimeString().substr(0,8) + '.' + String(now.getMilliseconds()).padStart(3,'0');
+            var $log = $('#simLog');
+            $log.append('<div style="color:' + color + ';">[' + time + '] ' + msg + '</div>');
+            $log.scrollTop($log[0].scrollHeight);
+        }
+
+        function setSimStatus(running) {
+            if (running) {
+                $('#simDot').css({background:'#f0a030', animation:'none'});
+                $('#simStatus').text('执行中');
+            } else {
+                $('#simDot').css({background:'#2ecc71', animation:'pulse 2s infinite'});
+                $('#simStatus').text('就绪');
+            }
+        }
+
+        function simDoCall(d, callback) {
+            var isDemo = $('#simDemoChk').is(':checked');
+            if (isDemo) {
+                var delay = 300 + Math.floor(Math.random() * 500);
+                simLog('  (演示) 模拟调用 ' + d.apiCommand, '#6a7078');
+                setTimeout(function() {
+                    callback({ success: true, httpCode: 200, responseTime: 50 + Math.floor(Math.random() * 200) });
+                }, delay);
+                return;
+            }
+            simLog('  → 请求: ' + d.apiUrl, '#4fc3f7');
+            var startTime = Date.now();
+            $.ajax({
+                url: d.apiUrl, type: 'GET', timeout: 8000,
+                success: function(data, textStatus, xhr) {
+                    var elapsed = Date.now() - startTime;
+                    callback({ success: true, httpCode: xhr.status, responseTime: elapsed });
+                },
+                error: function(xhr, textStatus, errorThrown) {
+                    var elapsed = Date.now() - startTime;
+                    var code = xhr.status || 0;
+                    var msg = 'HTTP ' + code + ' ' + textStatus;
+                    if (errorThrown) msg += ': ' + errorThrown;
+                    callback({ success: false, httpCode: code, responseTime: elapsed, msg: msg });
+                }
+            });
+        }
+
+        function simRunSingle(i) {
+            if (simRunning) { $.modal.msgWarning("正在执行中，请等待当前工序完成喵~"); return; }
+            simRunning = true; simStopFlag = false;
+            var d = simData[i];
+            d._status = 'running'; renderSimButtons();
+            setSimStatus(true);
+            simLog('▶ ' + d.processName + ' — ' + (d.lineAction||d.apiCommand), '#4fc3f7');
+            simDoCall(d, function(rd) {
+                if (simStopFlag) { simRunning = false; renderSimButtons(); return; }
+                simCounts.total++;
+                if (rd.success) {
+                    d._status = 'success'; d._respTime = rd.responseTime; simCounts.ok++;
+                    simLog('✓ ' + d.processName + ' 成功 | HTTP ' + rd.httpCode + ' | ' + rd.responseTime + 'ms', '#2ecc71');
+                } else {
+                    d._status = 'fail'; d._respTime = rd.responseTime; simCounts.fail++;
+                    simLog('✗ ' + d.processName + ' 失败 | ' + (rd.msg||'未知错误'), '#e74c3c');
+                }
+                updateSimCounts();
+                renderSimButtons();
+                simRunning = false;
+                setSimStatus(false);
+            });
+        }
+
+        function simRunAll() {
+            if (simRunning) { $.modal.msgWarning("正在执行中喵~"); return; }
+            simReset(false);
+            simStopFlag = false;
+            setSimStatus(true);
+            simLog('▶ 开始自动执行全部 ' + simData.length + ' 道工序...', '#f0a030');
+            simAutoNext();
+        }
+
+        function simAutoNext() {
+            if (simStopFlag || simIndex >= simData.length) {
+                simRunning = false;
+                setSimStatus(false);
+                if (simStopFlag) {
+                    simLog('■ 流程已被停止', '#f0a030');
+                } else {
+                    simLog('★ 工单流程模拟全部完成！', '#f0a030');
+                }
+                return;
+            }
+            simRunning = true;
+            var d = simData[simIndex];
+            d._status = 'running'; renderSimButtons();
+            simLog('▶ ' + d.processName + ' — ' + (d.lineAction||d.apiCommand), '#4fc3f7');
+            simDoCall(d, function(rd) {
+                if (simStopFlag) { simRunning = false; renderSimButtons(); return; }
+                simCounts.total++;
+                if (rd.success) {
+                    d._status = 'success'; d._respTime = rd.responseTime; simCounts.ok++;
+                    simLog('✓ ' + d.processName + ' 成功 | HTTP ' + rd.httpCode + ' | ' + rd.responseTime + 'ms', '#2ecc71');
+                } else {
+                    d._status = 'fail'; d._respTime = rd.responseTime; simCounts.fail++;
+                    simLog('✗ ' + d.processName + ' 失败 | ' + (rd.msg||'未知错误'), '#e74c3c');
+                }
+                simIndex++;
+                updateSimCounts();
+                renderSimButtons();
+                simRunning = false;
+                setTimeout(simAutoNext, 1000);
+            });
+        }
+
+        function simStop() {
+            simStopFlag = true;
+            for (var i = 0; i < simData.length; i++) {
+                if (simData[i]._status == 'running') simData[i]._status = 'pending';
+            }
+            renderSimButtons();
+            setSimStatus(false);
+            simLog('■ 流程已被用户停止', '#f0a030');
+        }
+
+        function simReset(clearLog) {
+            simStopFlag = true;
+            simRunning = false;
+            simIndex = 0;
+            simCounts = { total: 0, ok: 0, fail: 0 };
+            updateSimCounts();
+            for (var i = 0; i < simData.length; i++) {
+                simData[i]._status = 'pending';
+                simData[i]._respTime = null;
+            }
+            renderSimButtons();
+            setSimStatus(false);
+            if (clearLog !== false) {
+                $("#simLog").html('<div style="color:#6a7078;">[系统] 流程已重置，等待开始执行喵~</div>');
+            }
+        }
+    </script>
+
+    <style>
+        /* 模拟控制台按钮 */
+        .sim-cmd-btn {
+            position: relative;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 14px 8px 10px;
+            background: #282c34;
+            border: 1px solid #333842;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all .15s;
+            user-select: none;
+            overflow: hidden;
+        }
+        .sim-cmd-btn:hover { background: #31363f; border-color: #4a5058; transform: translateY(-1px); }
+        .sim-cmd-btn:active { transform: scale(.98); }
+        .sim-cmd-btn[disabled] { pointer-events: none; opacity: .5; }
+        .sim-cmd-btn .sim-btn-seq {
+            position: absolute; top: 4px; right: 8px;
+            font-size: 10px; color: #6a7078;
+        }
+        .sim-cmd-btn .sim-btn-action {
+            font-size: 14px; font-weight: 600; color: #e0e4ea; letter-spacing: .5px;
+        }
+        .sim-cmd-btn .sim-btn-process {
+            font-size: 11px; color: #6a7078;
+        }
+        .sim-cmd-btn .sim-btn-resp {
+            font-size: 10px; color: #2ecc71; margin-top: 2px;
+        }
+        .sim-btn-running {
+            border-left-color: #f0a030;
+            background: #2a2a24;
+            box-shadow: 0 0 8px rgba(240,160,48,0.15);
+        }
+        .sim-btn-success {
+            border-left-color: #2ecc71;
+            background: #1e2a22;
+        }
+        .sim-btn-fail {
+            border-left-color: #e74c3c;
+            background: #2a1e1e;
+        }
+    </style>
+</body>
+</html>

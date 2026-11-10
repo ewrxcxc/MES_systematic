@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.WorkOrderMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.WorkOrder" id="WorkOrderResult">
+        <id property="workOrderId" column="work_order_id"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="orderId" column="order_id"/>
+        <result property="planId" column="plan_id"/>
+        <result property="plannedQty" column="planned_qty"/>
+        <result property="completedQty" column="completed_qty"/>
+        <result property="status" column="status"/>
+        <result property="plannedStart" column="planned_start"/>
+        <result property="plannedEnd" column="planned_end"/>
+        <result property="currentStep" column="current_step"/>
+        <result property="totalSteps" column="total_steps"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.vo.WorkOrderVO" id="WorkOrderVOResult">
+        <id property="workOrderId" column="work_order_id"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="orderId" column="order_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="planId" column="plan_id"/>
+        <result property="planNo" column="plan_no"/>
+        <result property="plannedQty" column="planned_qty"/>
+        <result property="completedQty" column="completed_qty"/>
+        <result property="status" column="status"/>
+        <result property="plannedStart" column="planned_start"/>
+        <result property="plannedEnd" column="planned_end"/>
+        <result property="currentStep" column="current_step"/>
+        <result property="totalSteps" column="total_steps"/>
+        <result property="productId" column="product_id"/>
+        <result property="productName" column="product_name"/>
+        <result property="productCode" column="product_code"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectWorkOrderVo">
+        select w.work_order_id, w.work_order_no, w.order_id, o.order_no,
+               w.plan_id, p.plan_no,
+               w.planned_qty, w.completed_qty, w.status, w.planned_start, w.planned_end,
+               w.current_step, w.total_steps,
+               o.product_id, prd.product_name, prd.product_code,
+               w.remark, w.create_time, w.update_time
+        from work_order w left join sales_order o on o.order_id = w.order_id
+        left join production_plan p on p.plan_id = w.plan_id
+        left join product prd on prd.product_id = o.product_id
+    </sql>
+
+    <select id="selectWorkOrderList" parameterType="com.ruoyi.mes.dto.WorkOrderQueryDTO" resultMap="WorkOrderVOResult">
+        <include refid="selectWorkOrderVo"/>
+        <where>
+            <if test="workOrderNo != null and workOrderNo != ''">and w.work_order_no like concat('%',#{workOrderNo},'%')</if>
+            <if test="orderId != null">and w.order_id = #{orderId}</if>
+            <if test="status != null and status != ''">and w.status = #{status}</if>
+        </where>
+        order by w.work_order_id desc
+    </select>
+
+    <select id="selectWorkOrderById" parameterType="Long" resultMap="WorkOrderVOResult">
+        <include refid="selectWorkOrderVo"/> where w.work_order_id = #{workOrderId}
+    </select>
+
+    <select id="selectWorkOrderEntityById" parameterType="Long" resultMap="WorkOrderResult">
+        select * from work_order where work_order_id = #{workOrderId}
+    </select>
+
+    <select id="selectWorkOrderByNo" parameterType="String" resultMap="WorkOrderResult">
+        select * from work_order where work_order_no = #{workOrderNo} limit 1
+    </select>
+
+    <insert id="insertWorkOrder" parameterType="com.ruoyi.mes.domain.WorkOrder" useGeneratedKeys="true" keyProperty="workOrderId">
+        insert into work_order(
+            <if test="workOrderNo != null and workOrderNo != ''">work_order_no,</if>
+            <if test="orderId != null">order_id,</if>
+            <if test="planId != null">plan_id,</if>
+            <if test="plannedQty != null">planned_qty,</if>
+            <if test="completedQty != null">completed_qty,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="plannedStart != null">planned_start,</if>
+            <if test="plannedEnd != null">planned_end,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="workOrderNo != null and workOrderNo != ''">#{workOrderNo},</if>
+            <if test="orderId != null">#{orderId},</if>
+            <if test="planId != null">#{planId},</if>
+            <if test="plannedQty != null">#{plannedQty},</if>
+            <if test="completedQty != null">#{completedQty},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="plannedStart != null">#{plannedStart},</if>
+            <if test="plannedEnd != null">#{plannedEnd},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateWorkOrder" parameterType="com.ruoyi.mes.domain.WorkOrder">
+        update work_order
+        <set>
+            <if test="orderId != null">order_id = #{orderId},</if>
+            <if test="planId != null">plan_id = #{planId},</if>
+            <if test="plannedQty != null">planned_qty = #{plannedQty},</if>
+            <if test="completedQty != null">completed_qty = #{completedQty},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="plannedStart != null">planned_start = #{plannedStart},</if>
+            <if test="plannedEnd != null">planned_end = #{plannedEnd},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where work_order_id = #{workOrderId}
+    </update>
+
+    <delete id="deleteWorkOrderByIds">
+        delete from work_order where work_order_id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <select id="selectWorkOrdersByPlanId" resultMap="WorkOrderResult">
+        select * from work_order where plan_id = #{planId}
+    </select>
+
+    <select id="selectWorkOrdersByOrderId" resultMap="WorkOrderResult">
+        select * from work_order where order_id = #{orderId}
+    </select>
+
+</mapper>

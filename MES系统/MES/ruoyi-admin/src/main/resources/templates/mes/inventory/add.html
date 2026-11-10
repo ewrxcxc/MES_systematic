@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('库存管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <form id="edit-form" class="form-horizontal" style="padding:0;">
+            <div class="form-card">
+                <div class="form-card-header">基础信息</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">库存类型：</label>
+                <div class="col-sm-4"><select name="inventoryType" id="inventoryType" class="form-control" required>
+                    <option value="">请选择</option>
+                    <option value="原材料">原材料</option>
+                    <option value="半成品">半成品</option>
+                    <option value="成品">成品</option>
+                    <option value="低值易耗">低值易耗</option>
+                </select></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">物料名称：</label>
+                <div class="col-sm-4">
+                    <input type="text" name="materialName" id="materialSelect" class="form-control" list="materialList" required placeholder="选择或输入物料名称"/>
+                    <datalist id="materialList"></datalist>
+                </div>
+                <div class="col-sm-4"><span class="help-block m-b-none"><i class="fa fa-info-circle"></i> 可从列表选择（自动填入编码和库位），也可直接输入新物料名称</span></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">物料编码：</label>
+                <div class="col-sm-4"><input type="text" name="materialCode" id="materialCode" class="form-control" required placeholder="选择物料后自动填入，新物料请手动输入"/></div>
+                <label class="col-sm-2 control-label">数量：</label>
+                <div class="col-sm-4"><input type="number" name="quantity" class="form-control" required step="0.01" min="0.01"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">库位：</label>
+                <div class="col-sm-4"><input type="text" name="location" id="location" class="form-control"/></div>
+                <label class="col-sm-2 control-label">备注：</label>
+                <div class="col-sm-4"><input type="text" name="remark" class="form-control"/></div>
+            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                    <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                    <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+                </div>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/inventory"; var apiPrefix = ctx + "api/mes/inventory";
+        var id = [[${id}]];
+        var materialMap = {}; // 物料缓存: name -> {code, location}
+        var materialLoaded = false;
+
+        $(function() {
+            // 加载所有现有库存作为物料自动补全数据
+            $.post(apiPrefix + "/list", {pageSize: 999}, function(res) {
+                if (res.code == 0) {
+                    var seen = {};
+                    $(res.rows).each(function(i, item) {
+                        var key = item.materialName;
+                        if (key && !seen[key]) {
+                            seen[key] = true;
+                            materialMap[key] = {
+                                code: item.materialCode || '',
+                                location: item.location || ''
+                            };
+                            $("#materialList").append('<option value="' + key + '" data-code="' + (item.materialCode||'') + '" data-location="' + (item.location||'') + '">' + key + '</option>');
+                        }
+                    });
+                    materialLoaded = true;
+                }
+            });
+
+            // 物料名称输入变化时自动填充编码和库位
+            $("#materialSelect").on('input change', function() {
+                var val = $.trim($(this).val());
+                if (materialMap[val]) {
+                    $("#materialCode").val(materialMap[val].code);
+                    $("#location").val(materialMap[val].location);
+                }
+                // 如果是新物料，不清空已填内容，留给用户手动输入
+            });
+
+            // 编辑模式加载数据
+            if (id) {
+                $.get(apiPrefix + "/" + id, function(res) {
+                    if (res.code == 0) {
+                        var d = res.data;
+                        $("#inventoryType").val(d.inventoryType);
+                        $("#materialCode").val(d.materialCode);
+                        $("#materialSelect").val(d.materialName);
+                        // 如果是现有物料，确保 datalist 中有这个选项
+                        if (d.materialName && !materialMap[d.materialName]) {
+                            materialMap[d.materialName] = { code: d.materialCode, location: d.location };
+                            $("#materialList").append('<option value="' + d.materialName + '">' + d.materialName + '</option>');
+                        }
+                        $("input[name='quantity']").val(d.quantity);
+                        $("#location").val(d.location);
+                        $("input[name='remark']").val(d.remark||'');
+                    }
+                });
+            }
+        });
+
+        function submitHandler() {
+            var data = {};
+            $("#edit-form").serializeArray().forEach(function(i) { data[i.name] = i.value; });
+
+            // 验证：物料名称
+            if (!data.materialName || $.trim(data.materialName) === '') {
+                $.modal.msgWarning("请输入或选择物料名称");
+                return;
+            }
+            // 验证：物料编码
+            if (!data.materialCode || $.trim(data.materialCode) === '') {
+                $.modal.msgWarning("请输入物料编码（选择已有物料自动填入，新物料请手动输入）");
+                return;
+            }
+            // 验证：库存类型
+            if (!data.inventoryType || data.inventoryType === '') {
+                $.modal.msgWarning("请选择库存类型");
+                return;
+            }
+            // 验证：数量 > 0
+            if (!data.quantity || parseFloat(data.quantity) <= 0) {
+                $.modal.msgWarning("数量必须大于0");
+                return;
+            }
+            // 验证：库位非空
+            if (!data.location || $.trim(data.location) === '') {
+                $.modal.msgWarning("库位不能为空");
+                return;
+            }
+
+            if (id) {
+                data.inventoryId = id;
+                $.operate.save(apiPrefix + "/update", data);
+            } else {
+                $.operate.save(apiPrefix + "/create", data);
+            }
+        }
+        function resetForm() {
+            $("#edit-form")[0].reset();
+        }
+    </script>
+</body>
+</html>

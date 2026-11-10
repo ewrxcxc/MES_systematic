@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('工单拆卡')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <div class="box box-main">
+            <div class="box-header with-border">
+                <div class="box-title"><i class="fa fa-tasks"></i> 工单拆卡 — <span id="woNo"></span></div>
+            </div>
+            <div class="box-body">
+                <div class="alert alert-info">
+                    <strong>工单信息：</strong>
+                    <span id="woInfo"></span>
+                </div>
+                <table class="table table-bordered" id="splitTable">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>拆卡编号</th>
+                            <th>拆分数量</th>
+                            <th>分配产线</th>
+                            <th>分配班组</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="splitBody">
+                    </tbody>
+                </table>
+                <div class="form-actions">
+                    <button class="btn btn-primary" onclick="saveSplit()"><i class="fa fa-check"></i> 确认保存</button>
+                    <button class="btn btn-success" onclick="addRow()"><i class="fa fa-plus"></i> 添加拆分</button>
+                    <button class="btn btn-default" onclick="closeDialog()"><i class="fa fa-close"></i> 取消返回</button>
+                </div>
+                <div class="text-danger" style="margin-top:8px;">
+                    <small>注意：所有拆分数量总和必须等于工单计划数量</small>
+                </div>
+            </div>
+        </div>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var workOrderId = [[${workOrderId}]];
+        var apiPrefix = ctx + "api/mes";
+        var plannedQty = 0;
+        var lines = [];
+        var rowIdx = 0;
+
+        $(function() {
+            $.get(apiPrefix + "/workorder/" + workOrderId, function(res) {
+                if (res.code == 0) {
+                    var wo = res.data;
+                    plannedQty = wo.plannedQty || 0;
+                    $("#woNo").text(wo.workOrderNo);
+                    $("#woInfo").text("工单编号：" + wo.workOrderNo + "，计划数量：" + plannedQty + "，状态：" + wo.status);
+                }
+            });
+            // 加载产线
+            $.post(apiPrefix + "/mapping/lineList", function(res) {
+                if (res.code == 0) lines = res.data;
+            });
+            // 初始显示2行
+            addRow(); addRow();
+        });
+
+        function addRow() {
+            rowIdx++;
+            var lineOpts = '';
+            $(lines).each(function(i, l) { lineOpts += '<option value="' + l.lineId + '">' + l.lineName + '</option>'; });
+            var html = '<tr id="row_' + rowIdx + '">'
+                + '<td>' + rowIdx + '</td>'
+                + '<td><input type="text" class="form-control input-sm split-no" value="-" readonly/></td>'
+                + '<td><input type="number" class="form-control input-sm split-qty" value="0" min="1"/></td>'
+                + '<td><select class="form-control input-sm split-line"><option value="">请选择</option>' + lineOpts + '</select></td>'
+                + '<td><input type="text" class="form-control input-sm split-team" placeholder="如：A班"/></td>'
+                + '<td><a class="btn btn-danger btn-xs" onclick="$(\'#row_' + rowIdx + '\').remove()"><i class="fa fa-remove"></i></a></td>'
+                + '</tr>';
+            $("#splitBody").append(html);
+        }
+
+        function getSplits() {
+            var splits = [];
+            $("#splitBody tr").each(function() {
+                var qty = parseInt($(this).find('.split-qty').val()) || 0;
+                if (qty > 0) splits.push({
+                    splitQty: qty,
+                    lineId: $(this).find('.split-line').val() || null,
+                    lineName: $(this).find('.split-line option:selected').text() || '',
+                    teamName: $(this).find('.split-team').val() || ''
+                });
+            });
+            return splits;
+        }
+
+        function saveSplit() {
+            var splits = getSplits();
+            if (splits.length == 0) { $.modal.alertWarning("请至少添加一条拆分"); return; }
+            var total = 0;
+            $(splits).each(function(i, s) { total += s.splitQty; });
+            if (total != plannedQty) { $.modal.alertWarning("拆分数量总和(" + total + ")不等于计划数量(" + plannedQty + ")"); return; }
+
+            $.modal.confirm("确认拆卡？将生成" + splits.length + "个子工单。", function() {
+                $.ajax({
+                    url: apiPrefix + "/split/create/" + workOrderId,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(splits),
+                    success: function(res) {
+                        if (res.code == 0) {
+                            $.modal.alertSuccess("拆卡成功，共生成" + res.data + "个子工单");
+                            setTimeout(function() { closeDialog(); }, 1500);
+                        } else {
+                            $.modal.alertError(res.msg);
+                        }
+                    }
+                });
+            });
+        }
+
+        function closeDialog() {
+            $.modal.close();
+            if (parent && parent.$) parent.$.table.search();
+        }
+    </script>
+</body>
+</html>

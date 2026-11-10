@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.ProductMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.Product" id="ProductResult">
+        <id     property="productId"     column="product_id"     />
+        <result property="productCode"   column="product_code"   />
+        <result property="productName"   column="product_name"   />
+        <result property="specification" column="specification"  />
+        <result property="productModel"  column="product_model"  />
+        <result property="unit"          column="unit"           />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"      column="update_by"      />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"        column="remark"         />
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.vo.ProductVO" id="ProductVOResult">
+        <id     property="productId"     column="product_id"     />
+        <result property="productCode"   column="product_code"   />
+        <result property="productName"   column="product_name"   />
+        <result property="specification" column="specification"  />
+        <result property="productModel"  column="product_model"  />
+        <result property="unit"          column="unit"           />
+        <result property="remark"        column="remark"         />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectProductVo">
+        select product_id, product_code, product_name, specification, product_model, unit,
+               remark, create_time, update_time
+        from product
+    </sql>
+
+    <select id="selectProductList" parameterType="com.ruoyi.mes.dto.ProductQueryDTO" resultMap="ProductVOResult">
+        <include refid="selectProductVo"/>
+        <where>
+            <if test="productCode != null and productCode != ''">
+                and product_code like concat('%', #{productCode}, '%')
+            </if>
+            <if test="productName != null and productName != ''">
+                and product_name like concat('%', #{productName}, '%')
+            </if>
+            <if test="specification != null and specification != ''">
+                and specification like concat('%', #{specification}, '%')
+            </if>
+        </where>
+        order by product_id desc
+    </select>
+
+    <select id="selectProductById" parameterType="Long" resultMap="ProductVOResult">
+        <include refid="selectProductVo"/>
+        where product_id = #{productId}
+    </select>
+
+    <select id="selectProductEntityById" parameterType="Long" resultMap="ProductResult">
+        select product_id, product_code, product_name, specification, product_model, unit,
+               create_by, create_time, update_by, update_time, remark
+        from product
+        where product_id = #{productId}
+    </select>
+
+    <select id="selectProductByCode" parameterType="String" resultMap="ProductResult">
+        select product_id, product_code, product_name, specification, product_model, unit,
+               create_by, create_time, update_by, update_time, remark
+        from product
+        where product_code = #{productCode}
+        limit 1
+    </select>
+
+    <select id="selectProductByName" parameterType="String" resultMap="ProductResult">
+        select product_id, product_code, product_name, specification, product_model, unit,
+               create_by, create_time, update_by, update_time, remark
+        from product
+        where product_name = #{productName}
+        limit 1
+    </select>
+
+    <insert id="insertProduct" parameterType="com.ruoyi.mes.domain.Product" useGeneratedKeys="true" keyProperty="productId">
+        insert into product(
+            <if test="productCode != null and productCode != ''">product_code,</if>
+            <if test="productName != null and productName != ''">product_name,</if>
+            <if test="specification != null and specification != ''">specification,</if>
+            <if test="productModel != null and productModel != ''">product_model,</if>
+            <if test="unit != null and unit != ''">unit,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="productCode != null and productCode != ''">#{productCode},</if>
+            <if test="productName != null and productName != ''">#{productName},</if>
+            <if test="specification != null and specification != ''">#{specification},</if>
+            <if test="productModel != null and productModel != ''">#{productModel},</if>
+            <if test="unit != null and unit != ''">#{unit},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateProduct" parameterType="com.ruoyi.mes.domain.Product">
+        update product
+        <set>
+            <if test="productCode != null and productCode != ''">product_code = #{productCode},</if>
+            <if test="productName != null and productName != ''">product_name = #{productName},</if>
+            <if test="specification != null">specification = #{specification},</if>
+            <if test="productModel != null">product_model = #{productModel},</if>
+            <if test="unit != null">unit = #{unit},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where product_id = #{productId}
+    </update>
+
+    <delete id="deleteProductByIds">
+        delete from product where product_id in
+        <foreach collection="ids" item="productId" open="(" separator="," close=")">
+            #{productId}
+        </foreach>
+    </delete>
+
+</mapper>

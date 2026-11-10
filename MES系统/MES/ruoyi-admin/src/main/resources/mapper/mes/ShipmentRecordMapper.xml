@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.ShipmentRecordMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.ShipmentRecord" id="ShipmentResult">
+        <id property="shipmentId" column="shipment_id"/><result property="orderId" column="order_id"/>
+        <result property="shipmentNo" column="shipment_no"/><result property="expressCompany" column="express_company"/>
+        <result property="trackingNo" column="tracking_no"/><result property="shipmentQty" column="shipment_qty"/>
+        <result property="operatorId" column="operator_id"/><result property="shipmentTime" column="shipment_time"/>
+        <result property="customerName" column="customer_name"/><result property="productName" column="product_name"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/><result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/><result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.vo.ShipmentRecordVO" id="ShipmentVOResult">
+        <id property="shipmentId" column="shipment_id"/><result property="orderId" column="order_id"/>
+        <result property="orderNo" column="order_no"/><result property="shipmentNo" column="shipment_no"/>
+        <result property="expressCompany" column="express_company"/><result property="trackingNo" column="tracking_no"/>
+        <result property="shipmentQty" column="shipment_qty"/><result property="operatorId" column="operator_id"/>
+        <result property="operatorName" column="operator_name"/><result property="shipmentTime" column="shipment_time"/>
+        <result property="customerName" column="customer_name"/><result property="productName" column="product_name"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/><result property="createTime" column="create_time"/><result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectVo">
+        select s.shipment_id, s.order_id, o.order_no, s.shipment_no, s.express_company, s.tracking_no,
+               s.shipment_qty, s.customer_name, s.product_name, s.status,
+               s.operator_id, u.user_name as operator_name, s.shipment_time,
+               s.remark, s.create_time, s.update_time
+        from shipment_record s
+        left join sales_order o on o.order_id = s.order_id
+        left join sys_user u on u.user_id = s.operator_id
+    </sql>
+
+    <select id="selectShipmentList" resultMap="ShipmentVOResult">
+        <include refid="selectVo"/>
+        <where>
+            <if test="orderId != null">and s.order_id = #{orderId}</if>
+            <if test="shipmentNo != null and shipmentNo != ''">and s.shipment_no like concat('%',#{shipmentNo},'%')</if>
+        </where>
+        order by s.shipment_id desc
+    </select>
+
+    <select id="selectShipmentById" resultMap="ShipmentVOResult"><include refid="selectVo"/> where s.shipment_id=#{id}</select>
+    <select id="selectShipmentEntities" resultMap="ShipmentResult">select * from shipment_record <where><if test="orderId!=null">and order_id=#{orderId}</if><if test="shipmentNo!=null and shipmentNo!=''">and shipment_no like concat('%',#{shipmentNo},'%')</if></where> order by shipment_id desc</select>
+
+    <insert id="insertShipment" useGeneratedKeys="true" keyProperty="shipmentId">
+        insert into shipment_record(<if test="orderId!=null">order_id,</if><if test="shipmentNo!=null and shipmentNo!=''">shipment_no,</if><if test="expressCompany!=null and expressCompany!=''">express_company,</if><if test="trackingNo!=null and trackingNo!=''">tracking_no,</if><if test="shipmentQty!=null">shipment_qty,</if><if test="customerName!=null and customerName!=''">customer_name,</if><if test="productName!=null and productName!=''">product_name,</if><if test="status!=null and status!=''">status,</if><if test="operatorId!=null">operator_id,</if><if test="shipmentTime!=null">shipment_time,</if><if test="remark!=null and remark!=''">remark,</if><if test="createBy!=null and createBy!=''">create_by,</if>create_time)
+        values(<if test="orderId!=null">#{orderId},</if><if test="shipmentNo!=null and shipmentNo!=''">#{shipmentNo},</if><if test="expressCompany!=null and expressCompany!=''">#{expressCompany},</if><if test="trackingNo!=null and trackingNo!=''">#{trackingNo},</if><if test="shipmentQty!=null">#{shipmentQty},</if><if test="customerName!=null and customerName!=''">#{customerName},</if><if test="productName!=null and productName!=''">#{productName},</if><if test="status!=null and status!=''">#{status},</if><if test="operatorId!=null">#{operatorId},</if><if test="shipmentTime!=null">#{shipmentTime},</if><if test="remark!=null and remark!=''">#{remark},</if><if test="createBy!=null and createBy!=''">#{createBy},</if>sysdate())
+    </insert>
+
+    <update id="updateShipment">
+        update shipment_record <set>
+            <if test="orderId!=null">order_id=#{orderId},</if><if test="expressCompany!=null">express_company=#{expressCompany},</if>
+            <if test="trackingNo!=null">tracking_no=#{trackingNo},</if><if test="shipmentQty!=null">shipment_qty=#{shipmentQty},</if>
+            <if test="shipmentTime!=null">shipment_time=#{shipmentTime},</if><if test="remark!=null">remark=#{remark},</if>
+            <if test="updateBy!=null and updateBy!=''">update_by=#{updateBy},</if>update_time=sysdate()
+        </set> where shipment_id=#{shipmentId}
+    </update>
+
+    <delete id="deleteShipmentByIds">delete from shipment_record where shipment_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach></delete>
+
+    <select id="selectShipmentByOrderId" resultMap="ShipmentResult">
+        select * from shipment_record where order_id = #{orderId} order by shipment_time desc limit 1
+    </select>
+</mapper>

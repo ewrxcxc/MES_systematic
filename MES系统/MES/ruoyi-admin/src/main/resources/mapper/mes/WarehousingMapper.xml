@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.WarehousingMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.Warehousing" id="WarehousingResult">
+        <id property="warehousingId" column="warehousing_id"/>
+        <result property="warehousingNo" column="warehousing_no"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="planId" column="plan_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="warehousingType" column="warehousing_type"/>
+        <result property="warehousingStatus" column="warehousing_status"/>
+        <result property="inspector" column="inspector"/>
+        <result property="inspectResult" column="inspect_result"/>
+        <result property="warehousingBy" column="warehousing_by"/>
+        <result property="warehousingTime" column="warehousing_time"/>
+        <result property="location" column="location"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.domain.WarehousingDetail" id="WarehousingDetailResult">
+        <id property="detailId" column="detail_id"/>
+        <result property="warehousingId" column="warehousing_id"/>
+        <result property="productCode" column="product_code"/>
+        <result property="productName" column="product_name"/>
+        <result property="quantity" column="quantity"/>
+        <result property="unit" column="unit"/>
+        <result property="batchNo" column="batch_no"/>
+        <result property="location" column="location"/>
+        <result property="inspectResult" column="inspect_result"/>
+    </resultMap>
+
+    <select id="selectWarehousingList" resultMap="WarehousingResult">
+        select * from mes_warehousing
+        <where>
+            <if test="warehousingNo != null and warehousingNo != ''">and warehousing_no like concat('%',#{warehousingNo},'%')</if>
+            <if test="workOrderNo != null and workOrderNo != ''">and work_order_no like concat('%',#{workOrderNo},'%')</if>
+            <if test="warehousingStatus != null and warehousingStatus != ''">and warehousing_status = #{warehousingStatus}</if>
+        </where>
+        order by warehousing_id desc
+    </select>
+
+    <select id="selectWarehousingById" resultMap="WarehousingResult">
+        select * from mes_warehousing where warehousing_id=#{warehousingId}
+    </select>
+
+    <select id="selectWarehousingByWorkOrderId" resultMap="WarehousingResult">
+        select * from mes_warehousing where work_order_id=#{workOrderId}
+    </select>
+
+    <insert id="insertWarehousing" useGeneratedKeys="true" keyProperty="warehousingId">
+        insert into mes_warehousing(
+            <if test="warehousingNo!=null and warehousingNo!=''">warehousing_no,</if>
+            <if test="workOrderId!=null">work_order_id,</if>
+            <if test="workOrderNo!=null and workOrderNo!=''">work_order_no,</if>
+            <if test="planId!=null">plan_id,</if>
+            <if test="productId!=null">product_id,</if>
+            <if test="warehousingType!=null and warehousingType!=''">warehousing_type,</if>
+            <if test="warehousingStatus!=null and warehousingStatus!=''">warehousing_status,</if>
+            <if test="inspector!=null and inspector!=''">inspector,</if>
+            <if test="inspectResult!=null and inspectResult!=''">inspect_result,</if>
+            <if test="warehousingBy!=null and warehousingBy!=''">warehousing_by,</if>
+            <if test="warehousingTime!=null">warehousing_time,</if>
+            <if test="location!=null and location!=''">location,</if>
+            <if test="remark!=null and remark!=''">remark,</if>
+            <if test="createBy!=null and createBy!=''">create_by,</if>
+            create_time
+        ) values (
+            <if test="warehousingNo!=null and warehousingNo!=''">#{warehousingNo},</if>
+            <if test="workOrderId!=null">#{workOrderId},</if>
+            <if test="workOrderNo!=null and workOrderNo!=''">#{workOrderNo},</if>
+            <if test="planId!=null">#{planId},</if>
+            <if test="productId!=null">#{productId},</if>
+            <if test="warehousingType!=null and warehousingType!=''">#{warehousingType},</if>
+            <if test="warehousingStatus!=null and warehousingStatus!=''">#{warehousingStatus},</if>
+            <if test="inspector!=null and inspector!=''">#{inspector},</if>
+            <if test="inspectResult!=null and inspectResult!=''">#{inspectResult},</if>
+            <if test="warehousingBy!=null and warehousingBy!=''">#{warehousingBy},</if>
+            <if test="warehousingTime!=null">#{warehousingTime},</if>
+            <if test="location!=null and location!=''">#{location},</if>
+            <if test="remark!=null and remark!=''">#{remark},</if>
+            <if test="createBy!=null and createBy!=''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateWarehousing">
+        update mes_warehousing <set>
+            <if test="warehousingStatus!=null">warehousing_status=#{warehousingStatus},</if>
+            <if test="inspector!=null">inspector=#{inspector},</if>
+            <if test="inspectResult!=null">inspect_result=#{inspectResult},</if>
+            <if test="warehousingBy!=null">warehousing_by=#{warehousingBy},</if>
+            <if test="warehousingTime!=null">warehousing_time=#{warehousingTime},</if>
+            <if test="location!=null">location=#{location},</if>
+            <if test="remark!=null">remark=#{remark},</if>
+            <if test="updateBy!=null and updateBy!=''">update_by=#{updateBy},</if>
+            update_time=sysdate()
+        </set> where warehousing_id=#{warehousingId}
+    </update>
+
+    <delete id="deleteWarehousingByIds">
+        delete from mes_warehousing where warehousing_id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <select id="selectWarehousingDetailsByWarehousingId" resultMap="WarehousingDetailResult">
+        select * from mes_warehousing_detail where warehousing_id=#{warehousingId}
+    </select>
+
+    <insert id="insertWarehousingDetail" useGeneratedKeys="true" keyProperty="detailId">
+        insert into mes_warehousing_detail(warehousing_id,product_code,product_name,quantity,unit,batch_no,location,inspect_result)
+        values(#{warehousingId},#{productCode},#{productName},#{quantity},#{unit},#{batchNo},#{location},#{inspectResult})
+    </insert>
+
+    <delete id="deleteWarehousingDetailsByWarehousingId">
+        delete from mes_warehousing_detail where warehousing_id=#{warehousingId}
+    </delete>
+
+    <select id="selectWarehousingListByWorkOrderId" resultMap="WarehousingResult">
+        select * from mes_warehousing where work_order_id = #{workOrderId} order by create_time desc
+    </select>
+</mapper>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('质量追溯')" /></head>
+<style>
+  .search-collapse { background: #fff; border-radius: 6px; padding: 14px 18px 6px; border: 1px solid #e8eaed; margin-bottom: 12px; }
+  .search-collapse .select-list ul { margin-bottom: 0; }
+  .search-collapse .select-list ul li { margin-bottom: 8px; }
+  .table-panel { border-radius: 6px; overflow: hidden; border: 1px solid #e8eaed; }
+
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 11px; }
+  .tag-blue  { background: #ecf5ff; color: #409EFF; }
+  .tag-green { background: #f0f9eb; color: #67C23A; }
+  .tag-red   { background: #fef0f0; color: #F56C6C; }
+  .tag-gray  { background: #f4f5f7; color: #909399; }
+
+  .label-trace-PROCESS    { background: #409EFF !important; }
+  .label-trace-INSPECTION { background: #E6A23C !important; }
+  .label-trace-WAREHOUSE  { background: #67C23A !important; }
+</style>
+<body class="gray-bg">
+<div class="container-div">
+
+  <div class="search-collapse">
+    <form id="search-form"><div class="select-list"><ul>
+      <li>
+        <label>订单编号：</label>
+        <select name="orderNo" id="searchOrderNo" style="width:180px;">
+          <option value="">全部订单</option>
+        </select>
+      </li>
+      <li>
+        <label>工单编号：</label>
+        <input type="text" name="workOrderNo" id="searchWorkOrderNo" placeholder="选择订单自动填充" readonly style="width:160px;background:#f5f7fa;"/>
+      </li>
+      <li>
+        <label>产品名称：</label>
+        <input type="text" name="productName" id="searchProductName" placeholder="自动填充" readonly style="width:150px;background:#f5f7fa;"/>
+      </li>
+      <li>
+        <a class="btn btn-primary btn-rounded btn-sm" onclick="MES_TRACE.handleSearch()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+        <a class="btn btn-default btn-rounded btn-sm" onclick="MES_TRACE.resetSearch()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
+      </li>
+    </ul></div></form>
+  </div>
+
+  <div class="table-panel"><table id="traceTable"></table></div>
+
+</div>
+
+<th:block th:include="include :: footer" />
+<script th:src="@{/mes/js/trace.js}"></script>
+</body>
+</html>

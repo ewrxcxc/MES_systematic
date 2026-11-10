@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('入库管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>入库单号：<input type="text" name="warehousingNo"/></li>
+                <li>工单编号：<input type="text" name="workOrderNo"/></li>
+                <li>状态：<select name="warehousingStatus">
+                    <option value="">全部</option>
+                    <option value="WAITING">待入库</option>
+                    <option value="CHECKING">质检中</option>
+                    <option value="FINISHED">已入库</option>
+                </select></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success btn-rounded" onclick="addWarehousing()"><i class="fa fa-plus"></i> 新增入库单</a>
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()"><i class="fa fa-remove"></i> 删除</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/warehousing"; var apiPrefix = ctx + "api/mes/warehousing";
+        $(function() {
+            $.table.init({
+                url: apiPrefix + "/list", removeUrl: apiPrefix + "/delete",
+                sortName: "createTime", sortOrder: "desc", striped: true, modalName: "入库单",
+                columns: [
+                    { checkbox: true },
+                    { field: 'warehousingId', visible: false },
+                    { field: 'warehousingNo', title: '入库单号', sortable: true,
+                        formatter: function(v, r) { return '<a onclick="showDetail(' + r.warehousingId + ')">' + v + '</a>'; }
+                    },
+                    { field: 'workOrderNo', title: '工单编号' },
+                    { field: 'warehousingType', title: '入库类型', align: 'center',
+                        formatter: function(v) { return v == 'SEMI' ? '半成品' : '成品'; }
+                    },
+                    { field: 'warehousingStatus', title: '状态', align: 'center',
+                        formatter: function(v) {
+                            var m = {'WAITING':'primary','CHECKING':'warning','FINISHED':'info'};
+                            var t = {'WAITING':'待入库','CHECKING':'质检中','FINISHED':'已入库'};
+                            return '<span class="label label-' + (m[v]||'default') + '">' + (t[v]||v) + '</span>';
+                        }
+                    },
+                    { field: 'inspector', title: '质检人' },
+                    { field: 'inspectResult', title: '质检结果', align: 'center',
+                        formatter: function(v) {
+                            if (!v) return '-';
+                            return v == 'PASS' ? '<span class="label label-success">合格</span>' : '<span class="label label-danger">不合格</span>';
+                        }
+                    },
+                    { field: 'warehousingTime', title: '入库时间' },
+                    { field: 'createTime', title: '创建时间' },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            var btns = '<a class="btn btn-info btn-xs" onclick="showDetail(' + r.warehousingId + ')"><i class="fa fa-eye"></i> 明细</a> ';
+                            if (r.warehousingStatus == 'WAITING') {
+                                btns += '<a class="btn btn-warning btn-xs" onclick="doInspect(' + r.warehousingId + ')"><i class="fa fa-search"></i> 质检</a> ';
+                            }
+                            if (r.warehousingStatus == 'CHECKING' && r.inspectResult == 'PASS') {
+                                btns += '<a class="btn btn-success btn-xs" onclick="confirmWarehousing(' + r.warehousingId + ')"><i class="fa fa-check"></i> 确认入库</a> ';
+                            }
+                            btns += '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + r.warehousingId + '\')"><i class="fa fa-remove"></i>删除</a>';
+                            return btns;
+                        }
+                    }
+                ]
+            });
+        });
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+
+        function addWarehousing() {
+            $.modal.openTab("新增入库", prefix + "/add");
+        }
+
+        function showDetail(id) {
+            $.get(apiPrefix + "/" + id, function(res) {
+                if (res.code == 0) {
+                    var w = res.data;
+                    var html = '<table class="table table-bordered"><thead><tr><th>产品编码</th><th>产品名称</th><th>数量</th><th>批次</th><th>库位</th></tr></thead><tbody>';
+                    if (res.details) $(res.details).each(function(i, d) {
+                        html += '<tr><td>' + (d.productCode||'') + '</td><td>' + (d.productName||'') + '</td><td>' + d.quantity + '</td><td>' + (d.batchNo||'') + '</td><td>' + (d.location||'') + '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                    $.modal.alert('<strong>入库单：' + w.warehousingNo + '</strong><br>工单：' + (w.workOrderNo||'') + '<br>状态：' + w.warehousingStatus + '<br><br>' + html);
+                }
+            });
+        }
+
+        function doInspect(id) {
+            var inspector = prompt("请输入质检人姓名：");
+            if (!inspector) return;
+            var result = confirm("质检结果：\n确定=PASS(合格)\n取消=FAIL(不合格)") ? "PASS" : "FAIL";
+            $.operate.post(apiPrefix + "/inspect/" + id, {inspector: inspector, inspectResult: result}, function() { $.table.search(); });
+        }
+
+        function confirmWarehousing(id) {
+            var by = prompt("请输入入库经手人：");
+            if (!by) return;
+            var loc = prompt("请输入库位（如：成品仓-A区）：");
+            $.operate.post(apiPrefix + "/confirm/" + id, {warehousingBy: by, location: loc||''}, function() { $.table.search(); });
+        }
+    </script>
+</body>
+</html>

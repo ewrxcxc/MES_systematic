@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('工序中心')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>工单编号：<input type="text" name="workOrderNo"/></li>
+                <li>状态：<select name="status">
+                    <option value="">所有</option>
+                    <option value="WAITING">待生产</option>
+                    <option value="RUNNING">生产中</option>
+                    <option value="FINISHED">已完成</option>
+                </select></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="searchProcess()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/process"; var apiPrefix = ctx + "api/mes/process";
+        $(function() { queryList(); });
+        function queryList() {
+            $.table.init({
+                url: apiPrefix + "/allTasks", createUrl: '', updateUrl: '', removeUrl: '', sortName: "processSeq", sortOrder: "asc", striped: true, modalName: "工序",
+                queryParams: function(params) { return $.extend(params, $("#search-form").serializeObject()); },
+                columns: [
+                    { field: 'taskId', title: 'ID', visible: false },
+                    { field: 'workOrderNo', title: '工单编号', sortable: true },
+                    { field: 'processSeq', title: '工序序号', sortable: true },
+                    { field: 'processName', title: '工序名称' },
+                    { field: 'status', title: '状态', align: 'center',
+                        formatter: function(v) {
+                            var m = { 'WAITING':'primary','RUNNING':'success','FINISHED':'info' };
+                            var t = { 'WAITING':'待生产','RUNNING':'生产中','FINISHED':'已完成' };
+                            return '<span class="label label-' + (m[v] || 'default') + '">' + (t[v] || v) + '</span>';
+                        }
+                    },
+                    { field: 'plannedQty', title: '计划数量' },
+                    { field: 'goodQty', title: '良品', formatter: function(v) { return '<span class="text-success">' + (v||0) + '</span>'; } },
+                    { field: 'badQty', title: '不良品', formatter: function(v) { return '<span class="text-danger">' + (v||0) + '</span>'; } },
+                    { field: 'equipmentName', title: '设备' },
+                    { field: 'operatorName', title: '操作员' },
+                    { field: 'startTime', title: '开始时间' },
+                    { field: 'endTime', title: '结束时间' },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            var btns = '<a class="btn btn-info btn-xs" onclick="viewTask(' + r.taskId + ')"><i class="fa fa-eye"></i>查看</a> ';
+                            if (r.status == 'WAITING' || r.status == 'READY')
+                                btns += '<a class="btn btn-warning btn-xs" onclick="startTask(' + r.taskId + ', ' + r.processSeq + ')"><i class="fa fa-play"></i>开始</a> ';
+                            if (r.status == 'RUNNING')
+                                btns += '<a class="btn btn-success btn-xs" onclick="finishTask(' + r.taskId + ')"><i class="fa fa-check"></i>完成</a> ';
+                            return btns;
+                        }
+                    }
+                ]
+            });
+        }
+        function searchProcess() { $.table.search(); }
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+        function viewTask(taskId) {
+            $.get(ctx + "api/mes/workorder/list", {pageSize: 999}, function(res) {
+                var tasksAll = [];
+                if (res.code == 0 && res.rows) {
+                    // Find the task from the current table data
+                    $.get(apiPrefix + "/allTasks", {pageSize: 999}, function(r2) {
+                        if (r2.code == 0 && r2.rows) {
+                            var t = r2.rows.find(function(item) { return item.taskId == taskId; });
+                            if (t) showTaskDetail(t);
+                        }
+                    });
+                }
+            });
+        }
+        function showTaskDetail(t) {
+            var ss = { 'WAITING':'待生产','RUNNING':'生产中','FINISHED':'已完成' };
+            var sc = { 'WAITING':'primary','RUNNING':'success','FINISHED':'info' };
+            var btns = '';
+            if (t.status == 'WAITING' || t.status == 'READY')
+                btns = '<button class="btn btn-warning btn-sm" onclick="startTask(' + t.taskId + ', ' + t.processSeq + ')"><i class="fa fa-play"></i> 开始报工</button>';
+            if (t.status == 'RUNNING')
+                btns = '<button class="btn btn-success btn-sm" onclick="finishTask(' + t.taskId + ')"><i class="fa fa-check"></i> 完成报工</button>';
+            var html = '<table class="table table-bordered"><tr>'
+                + '<td width="20%"><strong>工单编号</strong></td><td width="30%">' + (t.workOrderNo||'') + '</td>'
+                + '<td width="20%"><strong>工序序号</strong></td><td width="30%">' + t.processSeq + '</td>'
+                + '</tr><tr>'
+                + '<td><strong>工序名称</strong></td><td>' + t.processName + '</td>'
+                + '<td><strong>状态</strong></td><td><span class="label label-' + (sc[t.status]||'default') + '">' + (ss[t.status]||t.status) + '</span></td>'
+                + '</tr><tr>'
+                + '<td><strong>计划数量</strong></td><td>' + (t.plannedQty||'-') + '</td>'
+                + '<td><strong>良品</strong></td><td><span class="text-success">' + (t.goodQty||0) + '</span></td>'
+                + '</tr><tr>'
+                + '<td><strong>不良品</strong></td><td><span class="text-danger">' + (t.badQty||0) + '</span></td>'
+                + '<td><strong>操作员</strong></td><td>' + (t.operatorName||'-') + '</td>'
+                + '</tr><tr>'
+                + '<td><strong>设备</strong></td><td>' + (t.equipmentName||'未分配') + '</td>'
+                + '<td><strong>开始时间</strong></td><td>' + (t.startTime||'-') + '</td>'
+                + '</tr><tr>'
+                + '<td><strong>结束时间</strong></td><td>' + (t.endTime||'-') + '</td>'
+                + '<td></td><td></td>'
+                + '</tr></table>'
+                + '<div class="text-center" style="margin-top:10px;">' + btns + '</div>';
+            $.modal.alert(html);
+        }
+        function startTask(taskId, processSeq) {
+            $.get(ctx + "api/mes/mapping/byProcess/" + processSeq, function(res) {
+                var eqOptions = '';
+                if (res.code == 0 && res.data && res.data.length > 0) {
+                    $(res.data).each(function(i, m) {
+                        eqOptions += m.equipmentName + ' [' + m.equipmentCode + '] - API: ' + (m.apiUrl||'N/A') + '\n';
+                    });
+                } else {
+                    eqOptions = '无映射设备，请使用通用设备\n';
+                }
+                eqOptions += '\n---\n或手动输入设备ID：';
+                var eqInput = prompt('可用设备：\n' + eqOptions);
+                if (eqInput) {
+                    var eqId = eqInput.trim();
+                    if (!/^\d+$/.test(eqId)) {
+                        if (res.data) {
+                            var found = res.data.find(function(m) { return m.equipmentName.indexOf(eqId) >= 0 || m.equipmentCode == eqId; });
+                            if (found) eqId = found.equipmentId;
+                        }
+                    }
+                    var opId = prompt("请分配操作员ID：", "1");
+                    if (opId && eqId) {
+                        $.operate.post(apiPrefix + "/start/" + taskId + "?operatorId=" + opId + "&equipmentId=" + eqId, {}, function() { $.table.search(); });
+                    }
+                }
+            });
+        }
+        function finishTask(taskId) {
+            var good = prompt("良品数量：", "0");
+            var bad = prompt("不良品数量：", "0");
+            if (good !== null) {
+                $.operate.post(apiPrefix + "/finish/" + taskId + "?goodQty=" + (good||0) + "&badQty=" + (bad||0), {}, function() { $.table.search(); });
+            }
+        }
+    </script>
+</body>
+</html>

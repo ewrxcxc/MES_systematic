@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('工单管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>工单编号：<input type="text" name="workOrderNo"/></li>
+                <li>状态：<select name="status">
+                    <option value="">所有</option>
+                    <option value="WAITING">待生产</option>
+                    <option value="RUNNING">生产中</option>
+                    <option value="FINISHED">已完成</option>
+                </select></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-info btn-rounded" th:href="@{/mes/plan}"><i class="fa fa-calendar"></i> 查看计划</a>
+            <a class="btn btn-primary btn-rounded" onclick="openDetail()"><i class="fa fa-eye"></i> 查看详情</a>
+            <a class="btn btn-warning btn-rounded single disabled" onclick="startWOToolbar()"><i class="fa fa-play"></i> 开始生产</a>
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()"><i class="fa fa-remove"></i> 删除</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/workorder"; var apiPrefix = ctx + "api/mes/workorder";
+        $(function() { queryList(); });
+        function queryList() {
+            $.table.init({
+                url: apiPrefix + "/list", createUrl: prefix + "/add", updateUrl: prefix + "/edit/{id}",
+                removeUrl: apiPrefix + "/delete", sortName: "createTime", sortOrder: "desc", striped: true, modalName: "工单",
+                columns: [
+                    { checkbox: true },
+                    { field: 'workOrderId', title: 'ID', visible: false },
+                    { field: 'workOrderNo', title: '工单编号', sortable: true },
+                    { field: 'planNo', title: '生产计划' },
+                    { field: 'orderNo', title: '销售订单' },
+                    { field: 'plannedQty', title: '计划数量' },
+                    { field: 'completedQty', title: '完成数量' },
+                    { field: 'currentStep', title: '当前工序', formatter: function(v, r) { return (v||0) + '/' + (r.totalSteps||0); } },
+                    { field: 'status', title: '状态', align: 'center',
+                        formatter: function(v) {
+                            var m = { 'WAITING':'primary','RUNNING':'success','FINISHED':'info' };
+                            var t = { 'WAITING':'待生产','RUNNING':'生产中','FINISHED':'已完成' };
+                            return '<span class="label label-' + (m[v] || 'default') + '">' + (t[v] || v) + '</span>';
+                        }
+                    },
+                    { field: 'plannedStart', title: '计划开始' },
+                    { field: 'createTime', title: '创建时间', sortable: true },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            var btns = '<a class="btn btn-info btn-xs" onclick="openDetailId(' + r.workOrderId + ')"><i class="fa fa-eye"></i>详情</a> ';
+                            if (r.status == 'WAITING' || r.status == 'READY') {
+                                btns += '<a class="btn btn-default btn-xs" onclick="splitWO(' + r.workOrderId + ')"><i class="fa fa-columns"></i>拆卡</a> ';
+                                btns += '<a class="btn btn-primary btn-xs" onclick="genPicking(' + r.workOrderId + ')"><i class="fa fa-cart-arrow-down"></i>领料</a> ';
+                                btns += '<a class="btn btn-warning btn-xs" onclick="startWO(' + r.workOrderId + ')"><i class="fa fa-play"></i>开始</a> ';
+                            }
+                            if (r.status == 'RUNNING') btns += '<a class="btn btn-success btn-xs" onclick="finishWO(' + r.workOrderId + ')"><i class="fa fa-check"></i>完成</a> ';
+                            return btns + '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + r.workOrderId + '\')"><i class="fa fa-remove"></i>删除</a>';
+                        }
+                    }
+                ]
+            });
+        }
+        function openDetail() { var rows = $("#bootstrap-table").bootstrapTable('getSelections'); if (rows.length == 1) openDetailId(rows[0].workOrderId); else $.modal.msgWarning("请选择一条记录"); }
+        function openDetailId(id) { $.modal.openTab("工单详情", prefix + "/detail/" + id); }
+        function startWOToolbar() { var rows = $("#bootstrap-table").bootstrapTable('getSelections'); if (rows.length == 1) startWO(rows[0].workOrderId); else $.modal.msgWarning("请选择一条记录"); }
+        function startWO(id) { $.modal.confirm("确认开始生产该工单？", function() { $.operate.post(apiPrefix + "/start/" + id, {}, function() { $.table.search(); }); }); }
+        function finishWO(id) {
+            $.modal.confirm("确认完成该工单？", function() {
+                var qty = prompt("请输入完成数量：");
+                if (qty) $.operate.post(apiPrefix + "/finish/" + id + "?completedQty=" + qty, {}, function() { $.table.search(); });
+            });
+        }
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+        function splitWO(id) { $.modal.openTab("工单拆卡", ctx + "mes/workorder/split/" + id); }
+        function genPicking(id) {
+            $.modal.confirm("确认从该工单生成领料单？将根据BOM自动展开物料需求。", function() {
+                $.operate.post(ctx + "api/mes/picking/createByWorkOrder/" + id, {}, function() { $.modal.msgSuccess("领料单生成成功"); });
+            });
+        }
+    </script>
+</body>
+</html>

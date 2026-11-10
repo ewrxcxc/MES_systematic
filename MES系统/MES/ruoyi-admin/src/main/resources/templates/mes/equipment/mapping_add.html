@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('工序-产线-API映射')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <form id="edit-form" class="form-horizontal" style="padding:0;">
+            <input type="hidden" name="id" id="id"/>
+            <div class="form-card">
+                <div class="form-card-header">基础信息</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">工序名称：</label>
+                <div class="col-sm-4"><select name="processName" id="processName" class="form-control" required>
+                    <option value="">请选择工序</option>
+                    <option value="原材料领料" data-code="PROC-001" data-seq="10"
+                        data-workcenter="注塑车间" data-action="启动初始化" data-apicommand="start">原材料领料</option>
+                    <option value="CNC加工" data-code="PROC-002" data-seq="20"
+                        data-workcenter="CNC加工中心" data-action="启动传送带" data-apicommand="sendstart">CNC加工</option>
+                    <option value="打磨处理" data-code="PROC-003" data-seq="30"
+                        data-workcenter="打磨工位" data-action="停止传送带" data-apicommand="sendstop">打磨处理</option>
+                    <option value="喷砂氧化" data-code="PROC-004" data-seq="40"
+                        data-workcenter="表面处理区" data-action="抓取盒子到平台" data-apicommand="startgrab">喷砂氧化</option>
+                    <option value="组装" data-code="PROC-005" data-seq="50"
+                        data-workcenter="装配车间" data-action="抓取盒子到传送带" data-apicommand="startgrabBack">组装</option>
+                    <option value="功能检测" data-code="PROC-006" data-seq="60"
+                        data-workcenter="质检区" data-action="开始打螺丝" data-apicommand="startcrue">功能检测</option>
+                    <option value="包装入库" data-code="PROC-007" data-seq="70"
+                        data-workcenter="包装车间" data-action="开始激光打标" data-apicommand="startlay">包装入库</option>
+                </select></div>
+                <label class="col-sm-2 control-label">工序编码：</label>
+                <div class="col-sm-4"><input type="text" name="processCode" id="processCode" class="form-control" required readonly style="background:#f5f5f5;"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">工序序号：</label>
+                <div class="col-sm-4"><input type="number" name="processSeq" id="processSeq" class="form-control" required readonly style="background:#f5f5f5;"/></div>
+                <label class="col-sm-2 control-label">工作中心：</label>
+                <div class="col-sm-4"><input type="text" name="workCenter" id="workCenter" class="form-control" placeholder="选择工序后自动填充"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">设备：</label>
+                <div class="col-sm-4"><select name="equipmentId" id="equipmentSelect" class="form-control" required></select></div>
+                <label class="col-sm-2 control-label">产线动作：</label>
+                <div class="col-sm-4"><input type="text" name="lineAction" id="lineAction" class="form-control" placeholder="选择工序后自动填充"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">API命令：</label>
+                <div class="col-sm-4"><input type="text" name="apiCommand" id="apiCommand" class="form-control" placeholder="选择工序后自动填充"/></div>
+                <label class="col-sm-2 control-label">API类型：</label>
+                <div class="col-sm-4"><select name="apiType" class="form-control">
+                    <option value="REST">REST</option>
+                    <option value="MQTT">MQTT</option>
+                    <option value="OPC">OPC UA</option>
+                </select></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">API地址：</label>
+                <div class="col-sm-8"><input type="text" name="apiUrl" id="apiUrl" class="form-control" list="apiList" placeholder="选择工序后自动生成"/>
+                    <datalist id="apiList">
+                        <option value="/api/mes/equipment/status"/>
+                        <option value="/api/mes/equipment/start"/>
+                        <option value="/api/mes/equipment/stop"/>
+                        <option value="/api/mes/process/start"/>
+                        <option value="/api/mes/process/complete"/>
+                        <option value="/api/mes/quality/check"/>
+                        <option value="/api/mes/workorder/create"/>
+                        <option value="/api/mes/workorder/start"/>
+                        <option value="/api/mes/workorder/complete"/>
+                        <option value="http://localhost:5000/WeatherForecast/command?commandname=start"/>
+                        <option value="http://localhost:5000/WeatherForecast/command?commandname=sendstart"/>
+                        <option value="http://localhost:5000/WeatherForecast/command?commandname=sendstop"/>
+                        <option value="http://localhost:5000/WeatherForecast/command?commandname=startgrab"/>
+                        <option value="http://localhost:5000/WeatherForecast/command?commandname=startgrabBack"/>
+                        <option value="http://localhost:5000/WeatherForecast/command?commandname=startcrue"/>
+                        <option value="http://localhost:5000/WeatherForecast/command?commandname=startlay"/>
+                    </datalist>
+                </div>
+                <label class="col-sm-2 control-label">状态：</label>
+                <div class="col-sm-4"><select name="status" class="form-control">
+                    <option value="ACTIVE">启用</option>
+                    <option value="INACTIVE">停用</option>
+                </select></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">备注：</label>
+                <div class="col-sm-10"><textarea name="remark" class="form-control" rows="3"></textarea></div>
+            </div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+            </div>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/mapping"; var apiPrefix = ctx + "api/mes/mapping";
+        var id = [[${id}]];
+        $(function() {
+            // 加载设备下拉
+            $.post(apiPrefix + "/equipmentList", function(res) {
+                if (res.code == 0) $(res.data).each(function(i, p) {
+                    var statusText = {'RUNNING':'[运行中]','IDLE':'[空闲]','MAINTENANCE':'[维修]','OFFLINE':'[离线]'};
+                    $("#equipmentSelect").append('<option value="' + p.equipmentId + '" data-code="' + (p.equipmentCode||'') + '">' + p.equipmentName + ' ' + (statusText[p.status]||'') + '</option>');
+                });
+            });
+            // 选择工序名称后自动填入所有关联字段
+            $("#processName").change(function() {
+                var opt = $(this).find("option:selected");
+                var code = opt.data("code");
+                var seq = opt.data("seq");
+                var workcenter = opt.data("workcenter");
+                var action = opt.data("action");
+                var apicommand = opt.data("apicommand");
+                if (code) $("#processCode").val(code);
+                if (seq) $("#processSeq").val(seq);
+                if (workcenter) $("#workCenter").val(workcenter);
+                if (action) $("#lineAction").val(action);
+                if (apicommand) {
+                    $("#apiCommand").val(apicommand);
+                    $("#apiUrl").val("http://localhost:5000/WeatherForecast/command?commandname=" + apicommand);
+                }
+            });
+            // 编辑模式加载数据
+            if (id) {
+                $.get(apiPrefix + "/" + id, function(res) {
+                    if (res.code == 0 && res.data) {
+                        var d = res.data;
+                        if (d.processName) {
+                            $("#processName").val(d.processName);
+                            $("#processCode").val(d.processCode||'');
+                            $("#processSeq").val(d.processSeq||'');
+                        }
+                        var setOther = function() {
+                            if (d.equipmentId) $("#equipmentSelect").val(d.equipmentId);
+                            $("#workCenter").val(d.workCenter||'');
+                            $("#lineAction").val(d.lineAction||'');
+                            $("#apiCommand").val(d.apiCommand||'');
+                            $("#apiUrl").val(d.apiUrl||'');
+                            $("[name='apiType']").val(d.apiType||'REST');
+                            $("[name='status']").val(d.status||'ACTIVE');
+                            $("[name='remark']").val(d.remark||'');
+                        };
+                        setTimeout(setOther, 300);
+                    }
+                });
+            }
+        });
+        function submitHandler() {
+            var data = {}; $("#edit-form").serializeArray().forEach(function(i) { data[i.name] = i.value; });
+            if (!data.processName || data.processName == '') { $.modal.msgWarning("请选择工序名称喵~"); return; }
+            if (!data.processCode || $.trim(data.processCode) == '') { $.modal.msgWarning("请选择工序（编码将自动生成）喵~"); return; }
+            if (!data.equipmentId || data.equipmentId == '') { $.modal.msgWarning("请选择设备喵~"); return; }
+            var eqOpt = $("#equipmentSelect option:selected");
+            data.equipmentCode = eqOpt.data('code') || '';
+            data.equipmentName = eqOpt.text().split(' [')[0] || '';
+            data.processSeq = parseInt(data.processSeq) || 0;
+            if (id) { data.id = id; $.operate.save(apiPrefix + "/update", data); }
+            else { $.operate.save(apiPrefix + "/create", data); }
+        }
+        function resetForm() {
+            $("#edit-form")[0].reset();
+            if (id) { $("#id").val(id); }
+        }
+    </script>
+</body>
+</html>

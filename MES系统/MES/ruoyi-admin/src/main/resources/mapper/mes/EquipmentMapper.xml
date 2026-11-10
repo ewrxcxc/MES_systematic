@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.EquipmentMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.Equipment" id="EquipmentResult">
+        <id property="equipmentId" column="equipment_id"/>
+        <result property="equipmentCode" column="equipment_code"/>
+        <result property="equipmentName" column="equipment_name"/>
+        <result property="status" column="status"/>
+        <result property="runtimeHours" column="runtime_hours"/>
+        <result property="lastMaintenance" column="last_maintenance"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <select id="selectEquipmentList" resultMap="EquipmentResult">
+        select * from equipment
+        <where>
+            <if test="equipmentCode != null and equipmentCode != ''">and equipment_code like concat('%',#{equipmentCode},'%')</if>
+            <if test="equipmentName != null and equipmentName != ''">and equipment_name like concat('%',#{equipmentName},'%')</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by equipment_id desc
+    </select>
+
+    <select id="selectEquipmentById" resultMap="EquipmentResult">select * from equipment where equipment_id=#{id}</select>
+
+    <insert id="insertEquipment" useGeneratedKeys="true" keyProperty="equipmentId">
+        insert into equipment(<if test="equipmentCode!=null and equipmentCode!=''">equipment_code,</if><if test="equipmentName!=null and equipmentName!=''">equipment_name,</if><if test="status!=null and status!=''">status,</if><if test="runtimeHours!=null">runtime_hours,</if><if test="lastMaintenance!=null">last_maintenance,</if><if test="remark!=null and remark!=''">remark,</if><if test="createBy!=null and createBy!=''">create_by,</if>create_time)
+        values(<if test="equipmentCode!=null and equipmentCode!=''">#{equipmentCode},</if><if test="equipmentName!=null and equipmentName!=''">#{equipmentName},</if><if test="status!=null and status!=''">#{status},</if><if test="runtimeHours!=null">#{runtimeHours},</if><if test="lastMaintenance!=null">#{lastMaintenance},</if><if test="remark!=null and remark!=''">#{remark},</if><if test="createBy!=null and createBy!=''">#{createBy},</if>sysdate())
+    </insert>
+
+    <update id="updateEquipment">
+        update equipment <set>
+            <if test="equipmentCode!=null">equipment_code=#{equipmentCode},</if><if test="equipmentName!=null">equipment_name=#{equipmentName},</if>
+            <if test="status!=null">status=#{status},</if><if test="runtimeHours!=null">runtime_hours=#{runtimeHours},</if>
+            <if test="lastMaintenance!=null">last_maintenance=#{lastMaintenance},</if><if test="remark!=null">remark=#{remark},</if>
+            <if test="updateBy!=null and updateBy!=''">update_by=#{updateBy},</if>update_time=sysdate()
+        </set> where equipment_id=#{equipmentId}
+    </update>
+
+    <delete id="deleteEquipmentByIds">delete from equipment where equipment_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach></delete>
+</mapper>

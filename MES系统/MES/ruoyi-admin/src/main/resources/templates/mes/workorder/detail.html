@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('工单详情')" /></head>
+<style>
+    /* 打破 RuoYi 框架 height:100% 级联，消除巨大空白 */
+    .container-div { height: auto !important; }
+    .container-div .row { height: auto !important; }
+    .gray-bg { height: auto !important; }
+
+    .box-body { padding: 12px; }
+    .wo-info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #e4e7ed; border: 1px solid #e4e7ed; border-radius: 4px; overflow: hidden; }
+    .wo-info-grid .wi-item { background: #fff; padding: 7px 10px; }
+    .wo-info-grid .wi-label { font-size: 11px; color: #909399; margin-bottom: 1px; }
+    .wo-info-grid .wi-value { font-size: 13px; color: #303133; font-weight: 500; word-break: break-all; }
+    .wo-actions .btn { margin-right: 6px; }
+    .section-gap { margin-top: 12px; }
+
+    .process-flow-wrap { padding: 8px 4px; overflow-x: auto; }
+    .process-flow { display: flex; align-items: flex-start; justify-content: center; min-width: 780px; padding: 8px 0; }
+    .process-node { display: flex; flex-direction: column; align-items: center; flex: 0 0 110px; cursor: pointer; transition: transform 0.2s; }
+    .process-node:hover { transform: translateY(-2px); }
+    .node-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 19px; color: #fff; transition: all 0.3s; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .node-circle.finished  { background: #67C23A; }
+    .node-circle.running   { background: #409EFF; animation: pulse-node 1.8s ease-in-out infinite; }
+    .node-circle.ready     { background: #67C23A; opacity: 0.65; }
+    .node-circle.waiting   { background: #909399; }
+    @keyframes pulse-node { 0%, 100% { box-shadow: 0 0 0 0 rgba(64,158,255,0.5); } 50% { box-shadow: 0 0 0 10px rgba(64,158,255,0); } }
+    .node-connector { flex: 0 0 28px; margin-top: 24px; height: 3px; border-radius: 1px; position: relative; }
+    .node-connector.done   { background: #67C23A; }
+    .node-connector.active { background: #67C23A; }
+    .node-connector.pending { background: #dcdfe6; }
+    .node-connector::after { content: ''; position: absolute; right: -5px; top: -5px; border: 6px solid transparent; border-left-width: 7px; }
+    .node-connector.done::after   { border-left-color: #67C23A; }
+    .node-connector.active::after { border-left-color: #67C23A; }
+    .node-connector.pending::after { border-left-color: #dcdfe6; }
+    .node-label { margin-top: 6px; font-size: 11px; font-weight: 600; color: #303133; text-align: center; line-height: 1.3; max-width: 108px; }
+    .node-badge { display: inline-block; margin-top: 3px; padding: 1px 8px; border-radius: 10px; font-size: 10px; }
+    .node-badge.finished { background: #e8f5e0; color: #529b2e; }
+    .node-badge.running  { background: #e6efff; color: #337ecc; }
+    .node-badge.ready    { background: #e8f5e0; color: #529b2e; }
+    .node-badge.waiting  { background: #f4f4f5; color: #909399; }
+    .node-btn { margin-top: 5px; }
+    .node-btn .btn { font-size: 11px; padding: 2px 10px; border-radius: 12px; }
+
+    .flow-progress-bar { margin: 8px auto 0; max-width: 640px; height: 5px; background: #e4e7ed; border-radius: 3px; overflow: hidden; }
+    .flow-progress-bar .fill { height: 100%; border-radius: 3px; background: #67C23A; transition: width 0.6s ease; }
+    .flow-progress-text { text-align: center; margin-top: 3px; font-size: 12px; color: #909399; }
+
+    @media (max-width: 992px) { .wo-info-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+<body class="gray-bg">
+    <div class="container-div">
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <i class="fa fa-tasks"></i> 工单信息
+                        <div class="box-tools pull-right wo-actions">
+                            <button class="btn btn-info btn-sm" id="btnPicking" onclick="goPicking()" style="display:none;"><i class="fa fa-cart-arrow-down"></i> 领料单</button>
+                            <button class="btn btn-primary btn-sm" id="btnWarehousing" onclick="goWarehousing()" style="display:none;"><i class="fa fa-sign-in"></i> 入库单</button>
+                            <button class="btn btn-warning btn-sm" id="btnStartWO" onclick="startWorkOrder()" style="display:none;"><i class="fa fa-play"></i> 开始生产</button>
+                            <button class="btn btn-success btn-sm" id="btnFinishWO" onclick="finishWorkOrder()" style="display:none;"><i class="fa fa-check"></i> 完成工单</button>
+                        </div>
+                    </div>
+                    <div class="box-body" id="wo-info"><p class="text-center" style="color:#909399;">加载中...</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row section-gap">
+            <div class="col-sm-12">
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <i class="fa fa-list-ol"></i> 工序流程
+                        <div class="box-tools pull-right" style="font-size:12px;color:#999;">点击节点查看详情 | 按钮操作报工</div>
+                    </div>
+                    <div class="box-body">
+                        <div id="process-flow-container">
+                            <p class="text-center" style="color:#909399;padding:20px 0;">正在加载工序流程...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var workOrderId = [[${workOrderId}]];
+        var apiPrefix = ctx + "api/mes/workorder";
+        var processApi = ctx + "api/mes/process";
+
+        var DEFAULT_PROCESSES = [
+            { seq: 1, name: '原材料领料', icon: 'fa-cube' },
+            { seq: 2, name: 'CNC加工',     icon: 'fa-cogs' },
+            { seq: 3, name: '打磨处理',     icon: 'fa-dot-circle-o' },
+            { seq: 4, name: '喷砂/氧化',   icon: 'fa-shower' },
+            { seq: 5, name: '组装',         icon: 'fa-puzzle-piece' },
+            { seq: 6, name: '功能检测',     icon: 'fa-check-circle' },
+            { seq: 7, name: '包装入库',     icon: 'fa-archive' }
+        ];
+
+        var gWorkOrder = null;
+        var gProcessTasks = null;
+
+        $(function() {
+            loadWorkOrder(function() { loadProcessTasks(); });
+        });
+
+        function loadWorkOrder(callback) {
+            $.ajax({
+                url: apiPrefix + "/" + workOrderId,
+                success: function(res) {
+                    if (res.code == 0) {
+                        gWorkOrder = res.data;
+                        var d = res.data;
+                        var smap = { 'WAITING':'待生产','RUNNING':'生产中','FINISHED':'已完成' };
+                        var cmap = { 'WAITING':'info','RUNNING':'warning','FINISHED':'success' };
+                        var html = '<div class="wo-info-grid">'
+                            + ci('工单编号', d.workOrderNo)
+                            + ci('销售订单', d.orderNo||'-')
+                            + ci('生产计划', d.planNo||'-')
+                            + ci('状态', '<span class="label label-' + (cmap[d.status]||'default') + '">' + (smap[d.status]||d.status) + '</span>')
+                            + ci('计划数量', d.plannedQty||0)
+                            + ci('完成数量', d.completedQty||0)
+                            + ci('当前工序', (d.currentStep||0) + '/' + (d.totalSteps||7))
+                            + ci('计划开始', d.plannedStart||'-')
+                            + ci('计划结束', d.plannedEnd||'-')
+                            + ci('创建时间', d.createTime||'-')
+                            + ci('备注', d.remark||'-')
+                            + '</div>';
+                        $('#wo-info').html(html);
+                        if (d.status == 'WAITING') $('#btnStartWO').show();
+                        if (d.status == 'RUNNING') { $('#btnFinishWO').show(); $('#btnPicking').show(); }
+                        if (d.status == 'FINISHED') { $('#btnPicking').show(); $('#btnWarehousing').show(); }
+                    }
+                    if (callback) callback();
+                },
+                error: function() { $('#wo-info').html('<p class="text-center text-danger">工单信息加载失败</p>'); if (callback) callback(); }
+            });
+        }
+
+        function ci(label, value) {
+            return '<div class="wi-item"><div class="wi-label">' + label + '</div><div class="wi-value">' + value + '</div></div>';
+        }
+
+        function loadProcessTasks() {
+            $.ajax({
+                url: processApi + "/tasks/" + workOrderId,
+                success: function(res) {
+                    var tasks = null;
+                    if (res.code == 0 && res.data) {
+                        if (Array.isArray(res.data)) tasks = res.data;
+                        else if (res.data.tasks) tasks = res.data.tasks;
+                        else if (res.data.rows) tasks = res.data.rows;
+                    }
+                    if (tasks && tasks.length > 0) {
+                        gProcessTasks = tasks;
+                        renderProcessFlow(tasks);
+                    } else {
+                        renderFallbackFlow();
+                    }
+                },
+                error: function() { renderFallbackFlow(); }
+            });
+        }
+
+        function renderFallbackFlow() {
+            if (!gWorkOrder) {
+                $('#process-flow-container').html('<p class="text-center" style="color:#f56c6c;">工序数据加载失败，请刷新页面重试</p>');
+                return;
+            }
+            var cur = gWorkOrder.currentStep || 1;
+            var st = gWorkOrder.status || 'WAITING';
+            var tasks = DEFAULT_PROCESSES.map(function(p) {
+                var s;
+                if (st == 'FINISHED') s = 'FINISHED';
+                else if (st == 'RUNNING') s = (p.seq < cur) ? 'FINISHED' : (p.seq == cur ? 'RUNNING' : 'WAITING');
+                else s = 'WAITING';
+                return { taskId: 0, processSeq: p.seq, processName: p.name, status: s, plannedQty: gWorkOrder.plannedQty, goodQty: 0, badQty: 0 };
+            });
+            gProcessTasks = tasks;
+            renderProcessFlow(tasks);
+        }
+
+        function normalizeStatus(s) {
+            var u = (s || '').toUpperCase();
+            if (u == 'IN_PROGRESS') return 'RUNNING';
+            if (u == 'PENDING' || u == 'TODO') return 'WAITING';
+            if (u == 'DONE' || u == 'COMPLETED') return 'FINISHED';
+            return u;
+        }
+
+        function renderProcessFlow(tasks) {
+            if (!tasks || tasks.length === 0) {
+                $('#process-flow-container').html('<p class="text-center" style="color:#f56c6c;">工序数据为空</p>');
+                return;
+            }
+
+            var icons = { 'FINISHED':'fa-check', 'RUNNING':'fa-spinner fa-pulse', 'READY':'fa-check', 'WAITING':'fa-circle-o' };
+            var labels = { 'FINISHED':'已完成', 'RUNNING':'进行中', 'READY':'待开始', 'WAITING':'等待中' };
+            var completedCount = 0;
+            var hasRunning = false;
+            tasks.forEach(function(t) {
+                if (normalizeStatus(t.status) == 'FINISHED') completedCount++;
+                if (normalizeStatus(t.status) == 'RUNNING') hasRunning = true;
+            });
+            var pct = Math.round(completedCount / tasks.length * 100);
+
+            var nodesHtml = '';
+            tasks.forEach(function(t, i) {
+                var status = normalizeStatus(t.status);
+                var seq = t.processSeq || (i + 1);
+                var procDef = DEFAULT_PROCESSES[seq - 1] || { icon: 'fa-circle' };
+                var nodeClass = status.toLowerCase();
+                var canStart = ((status == 'READY' || status == 'WAITING') && t.taskId > 0);
+                var canFinish = (status == 'RUNNING' && t.taskId > 0);
+
+                nodesHtml += '<div class="process-node" onclick="showProcessDetail('
+                    + (t.taskId||0) + ',' + seq + ',\'' + (t.processName||'').replace(/'/g,"\\'") + '\',\'' + status + '\','
+                    + (t.goodQty||0) + ',' + (t.badQty||0) + ',\'' + (t.equipmentName||'').replace(/'/g,"\\'") + '\',\''
+                    + (t.operatorName||'').replace(/'/g,"\\'") + '\',\'' + (t.startTime||'').replace(/'/g,"\\'") + '\',\''
+                    + (t.endTime||'').replace(/'/g,"\\'") + '\',' + (t.plannedQty||0) + ')"'
+                    + '>'
+                    + '<div class="node-circle ' + nodeClass + '"><i class="fa ' + (icons[status]||'fa-circle-o') + '"></i></div>'
+                    + '<div class="node-label">' + seq + '. ' + (t.processName||'') + '</div>'
+                    + '<span class="node-badge ' + nodeClass + '">' + (labels[status]||status) + '</span>';
+
+                if (canFinish) {
+                    nodesHtml += '<div class="node-btn"><button class="btn btn-xs btn-success" onclick="event.stopPropagation();finishProcess(' + t.taskId + ')"><i class="fa fa-check"></i> 完成</button></div>';
+                } else if (canStart) {
+                    nodesHtml += '<div class="node-btn"><button class="btn btn-xs btn-warning" onclick="event.stopPropagation();startProcess(' + t.taskId + ',' + seq + ')"><i class="fa fa-play"></i> 开始</button></div>';
+                }
+
+                nodesHtml += '</div>';
+
+                if (i < tasks.length - 1) {
+                    var lineClass = (status == 'FINISHED') ? 'done' : (status == 'RUNNING' ? 'active' : 'pending');
+                    nodesHtml += '<div class="node-connector ' + lineClass + '"></div>';
+                }
+            });
+
+            var progressHtml = '<div class="flow-progress-bar"><div class="fill" style="width:' + pct + '%;"></div></div>'
+                + '<div class="flow-progress-text">' + completedCount + '/' + tasks.length + ' 道工序已完成（' + pct + '%）'
+                + (hasRunning ? ' <span style="color:#409EFF;">— 生产中</span>' : '')
+                + '</div>';
+
+            $('#process-flow-container').html(
+                '<div class="process-flow-wrap"><div class="process-flow">' + nodesHtml + '</div>' + progressHtml + '</div>'
+            );
+        }
+
+        /** 开工 */
+        function startProcess(taskId, processSeq) {
+            if (!taskId || taskId <= 0) { $.modal.msgWarning("请先开始生产生成工序"); return; }
+            $.get(ctx + "api/mes/mapping/byProcess/" + processSeq, function(res) {
+                var eqOptions = '';
+                if (res.code == 0 && res.data && res.data.length > 0) {
+                    $(res.data).each(function(i, m) { eqOptions += m.equipmentName + ' [' + m.equipmentCode + ']\n'; });
+                } else {
+                    eqOptions = '无映射设备\n';
+                }
+                eqOptions += '\n或手动输入设备ID：';
+                var eqInput = prompt('可用设备：\n' + eqOptions);
+                if (eqInput) {
+                    var eqId = eqInput.trim();
+                    if (!/^\d+$/.test(eqId) && res.data) {
+                        var found = res.data.find(function(m) { return m.equipmentName.indexOf(eqId) >= 0 || m.equipmentCode == eqId; });
+                        if (found) eqId = found.equipmentId;
+                    }
+                    var opId = prompt("请分配操作员ID：", "1");
+                    if (opId && eqId) {
+                        $.operate.post(processApi + "/start/" + taskId + "?operatorId=" + opId + "&equipmentId=" + eqId, {}, function() {
+                            loadWorkOrder(function() { loadProcessTasks(); });
+                        });
+                    }
+                }
+            });
+        }
+
+        /** 完工 */
+        function finishProcess(taskId) {
+            if (!taskId || taskId <= 0) { $.modal.msgWarning("请先开始生产生成工序"); return; }
+            $.modal.confirm("确认完成当前工序？完成后将刷新工序状态。", function() {
+                $.operate.post(processApi + "/finish/" + taskId + "?goodQty=" + (gWorkOrder.plannedQty||0) + "&badQty=0", {}, function() {
+                    loadWorkOrder(function() { loadProcessTasks(); });
+                });
+            });
+        }
+
+        /** 工序详情弹窗 */
+        function showProcessDetail(taskId, seq, name, status, goodQty, badQty, equipName, opName, startTime, endTime, plannedQty) {
+            var smap = { 'WAITING':'待生产','RUNNING':'生产中','FINISHED':'已完成','READY':'待开始' };
+            var cmap = { 'WAITING':'info','RUNNING':'warning','FINISHED':'success','READY':'primary' };
+            var st = status.toUpperCase();
+            if (st == 'IN_PROGRESS') st = 'RUNNING';
+            var stLower = st.toLowerCase();
+            var procDef = DEFAULT_PROCESSES[(seq||1) - 1] || { icon: 'fa-circle' };
+
+            var actBtns = '';
+            if (taskId > 0) {
+                if (st == 'READY' || st == 'WAITING') {
+                    actBtns = '<button class="btn btn-warning btn-sm" onclick="closeModalAndStart(' + taskId + ',' + seq + ')"><i class="fa fa-play"></i> 开始报工</button>';
+                }
+                if (st == 'RUNNING') {
+                    actBtns = '<button class="btn btn-success btn-sm" onclick="closeModalAndFinish(' + taskId + ')"><i class="fa fa-check"></i> 完成报工</button>';
+                }
+            }
+
+            var html = '<div style="text-align:center;margin-bottom:10px;">'
+                + '<div class="node-circle ' + stLower + '" style="display:inline-flex;width:56px;height:56px;font-size:22px;">'
+                + '<i class="fa ' + procDef.icon + '"></i></div>'
+                + '<h4 style="margin-top:6px;">' + seq + '. ' + name + '</h4>'
+                + '<span class="label label-' + (cmap[st]||'default') + '" style="font-size:12px;">' + (smap[st]||st) + '</span>'
+                + '</div>'
+                + '<table class="table table-bordered"><tr>'
+                + '<td width="25%"><strong>计划数量</strong></td><td width="25%">' + (plannedQty||'-') + '</td>'
+                + '<td width="25%"><strong>良品数</strong></td><td width="25%"><span class="text-success" style="font-weight:bold;">' + (goodQty||0) + '</span></td>'
+                + '</tr><tr>'
+                + '<td><strong>不良品数</strong></td><td><span class="text-danger" style="font-weight:bold;">' + (badQty||0) + '</span></td>'
+                + '<td><strong>设备</strong></td><td>' + (equipName||'未分配') + '</td>'
+                + '</tr><tr>'
+                + '<td><strong>操作员</strong></td><td>' + (opName||'-') + '</td>'
+                + '<td><strong>开始时间</strong></td><td>' + (startTime||'-') + '</td>'
+                + '</tr><tr>'
+                + '<td><strong>结束时间</strong></td><td>' + (endTime||'-') + '</td>'
+                + '<td></td><td></td>'
+                + '</tr></table>'
+                + (actBtns ? '<div class="text-center" style="margin-top:10px;">' + actBtns + '</div>' : '');
+            $.modal.alert(html);
+        }
+
+        function closeModalAndStart(taskId, seq) { $.modal.close(); setTimeout(function() { startProcess(taskId, seq); }, 300); }
+        function closeModalAndFinish(taskId) { $.modal.close(); setTimeout(function() { finishProcess(taskId); }, 300); }
+
+        function startWorkOrder() {
+            $.modal.confirm("确认开始生产？启动后将自动生成7道工序任务。", function() {
+                $.operate.post(apiPrefix + "/start/" + workOrderId, {}, function() {
+                    loadWorkOrder(function() { loadProcessTasks(); });
+                });
+            });
+        }
+
+        function finishWorkOrder() {
+            $.modal.confirm("确认完成工单？所有未完成工序将自动标记完成，并生成入库单。", function() {
+                $.operate.post(apiPrefix + "/finish/" + workOrderId + "?completedQty=" + (gWorkOrder.plannedQty||0), {}, function() {
+                    loadWorkOrder(function() { loadProcessTasks(); });
+                });
+            });
+        }
+
+        function goPicking() {
+            $.post(ctx + "api/mes/picking/list", {workOrderId: workOrderId}, function(r) {
+                if (r.code == 0 && r.rows && r.rows.length > 0) {
+                    $.modal.openTab("领料单详情", ctx + "mes/picking/detail/" + r.rows[0].pickingId);
+                } else {
+                    $.modal.msgWarning("该工单暂无领料单");
+                }
+            });
+        }
+
+        function goWarehousing() {
+            $.post(ctx + "api/mes/warehousing/list", {workOrderId: workOrderId}, function(r) {
+                if (r.code == 0 && r.rows && r.rows.length > 0) {
+                    $.modal.openTab("入库单详情", ctx + "mes/warehousing/add");
+                } else {
+                    $.modal.msgWarning("该工单暂无入库单");
+                }
+            });
+        }
+    </script>
+</body>
+</html>

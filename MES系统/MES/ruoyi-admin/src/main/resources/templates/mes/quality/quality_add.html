@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('工单质检')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <form id="edit-form" class="form-horizontal" style="padding:0;">
+            <input type="hidden" name="id" id="recordId"/>
+            <input type="hidden" name="productId" id="productId"/>
+            <div class="form-card">
+                <div class="form-card-header">基础信息</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">工单：</label>
+                <div class="col-sm-4"><select name="workOrderId" id="workOrderId" class="form-control">
+                    <option value="">请选择工单</option>
+                </select></div>
+                <label class="col-sm-2 control-label">产品：</label>
+                <div class="col-sm-4"><input type="text" name="productName" id="productName" class="form-control" readonly placeholder="选择工单后自动显示"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">检验类型：</label>
+                <div class="col-sm-4"><select name="checkType" class="form-control">
+                    <option value="来料检验">来料检验</option>
+                    <option value="过程检验">过程检验</option>
+                    <option value="成品检验" selected>成品检验</option>
+                </select></div>
+                <label class="col-sm-2 control-label">检验时间：</label>
+                <div class="col-sm-4">
+                    <input type="text" name="checkTime" id="checkTime" class="form-control time-input" data-type="datetime" data-format="yyyy-MM-dd HH:mm:ss" autocomplete="off" placeholder="请选择检验时间"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">检验数量：</label>
+                <div class="col-sm-4"><input type="number" name="quantity" id="quantity" class="form-control" min="0" placeholder="请输入检验数量"/></div>
+                <label class="col-sm-2 control-label">不良数量：</label>
+                <div class="col-sm-4"><input type="number" name="defectQuantity" id="defectQuantity" class="form-control" min="0" placeholder="请输入不良数量"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">检验结果：</label>
+                <div class="col-sm-4"><select name="result" class="form-control">
+                    <option value="PASS" selected>合格（PASS）</option>
+                    <option value="FAIL">不合格（FAIL）</option>
+                </select></div>
+                <label class="col-sm-2 control-label">检验员：</label>
+                <div class="col-sm-4"><input type="text" name="inspector" class="form-control" placeholder="请输入检验员姓名"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">备注：</label>
+                <div class="col-sm-10"><textarea name="remark" class="form-control" rows="3"></textarea></div>
+            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                    <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                    <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+                </div>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/quality"; var apiPrefix = ctx + "api/mes/quality";
+        var recordId = [[${recordId}]];
+        var now = new Date();
+        var defaultTime = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
+            + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+
+        $(function() {
+            // 默认填充当前时间
+            $("#checkTime").val(defaultTime);
+
+            // 加载工单下拉框（FINISHED 或 RUNNING 状态）
+            $.post(ctx + "api/mes/workorder/list", {pageSize: 999}, function(res) {
+                if (res.code == 0) $(res.rows).each(function(i, p) {
+                    var statusText = {'WAITING':'等待','READY':'就绪','RUNNING':'运行中','FINISHED':'已完成'};
+                    if (p.status == 'FINISHED' || p.status == 'RUNNING') {
+                        var productIdAttr = p.productId ? ' data-product-id="' + p.productId + '"' : '';
+                        var productAttr = p.productName ? ' data-product="' + p.productName + '"' : '';
+                        $("#workOrderId").append('<option value="' + p.workOrderId + '"' + productIdAttr + productAttr + '>'
+                            + p.workOrderNo + ' [' + (statusText[p.status]||p.status) + ']</option>');
+                    }
+                });
+            });
+
+            // 工单变更时自动显示产品名称和产品ID
+            $("#workOrderId").on("change", function() {
+                var sel = $(this).find("option:selected");
+                $("#productId").val(sel.attr("data-product-id") || '');
+                $("#productName").val(sel.attr("data-product") || '');
+            });
+
+            if (recordId) loadData();
+        });
+
+        function loadData() {
+            $.get(apiPrefix + "/" + recordId, function(res) {
+                if (res.code == 0) {
+                    $.each(res.data, function(k, v) {
+                        if (k === 'checkTime') {
+                            if (v) $("#edit-form [name='" + k + "']").val(v);
+                        } else {
+                            $("#edit-form [name='" + k + "']").val(v);
+                        }
+                    });
+                    $("#recordId").val(res.data.id);
+                    if (res.data.workOrderId) {
+                        $("#workOrderId").val(res.data.workOrderId).trigger("change");
+                    }
+                }
+            });
+        }
+
+        function submitHandler() {
+            var data = {}; $("#edit-form").serializeArray().forEach(function(i) { data[i.name] = i.value; });
+            if (!data.workOrderId || data.workOrderId == '') { $.modal.msgWarning("请选择工单喵~"); return; }
+            if (!data.quantity || data.quantity == '0') { $.modal.msgWarning("请填写检验数量喵~"); return; }
+            if (!data.result) { $.modal.msgWarning("请选择检验结果喵~"); return; }
+            if (!data.inspector || data.inspector == '') { $.modal.msgWarning("请填写检验员喵~"); return; }
+
+            if (recordId) { data.id = recordId; $.operate.save(apiPrefix + "/update", data); }
+            else { $.operate.save(apiPrefix + "/create", data); }
+        }
+        function resetForm() { $("#edit-form")[0].reset(); $("#checkTime").val(defaultTime); }
+    </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.ProductionPlanMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.ProductionPlan" id="ProductionPlanResult">
+        <id property="planId" column="plan_id"/>
+        <result property="planNo" column="plan_no"/>
+        <result property="salesOrderId" column="sales_order_id"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="orderQuantity" column="order_quantity"/>
+        <result property="inventoryQuantity" column="inventory_quantity"/>
+        <result property="safeStock" column="safe_stock"/>
+        <result property="requiredQuantity" column="required_quantity"/>
+        <result property="priority" column="priority"/>
+        <result property="isUrgent" column="is_urgent"/>
+        <result property="planStatus" column="plan_status"/>
+        <result property="planStartTime" column="plan_start_time"/>
+        <result property="planEndTime" column="plan_end_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.vo.ProductionPlanVO" id="ProductionPlanVOResult">
+        <id property="planId" column="plan_id"/>
+        <result property="planNo" column="plan_no"/>
+        <result property="salesOrderId" column="sales_order_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="productId" column="product_id"/>
+        <result property="productName" column="product_name"/>
+        <result property="orderQuantity" column="order_quantity"/>
+        <result property="inventoryQuantity" column="inventory_quantity"/>
+        <result property="safeStock" column="safe_stock"/>
+        <result property="requiredQuantity" column="required_quantity"/>
+        <result property="plannedQty" column="planned_qty"/>
+        <result property="completedQty" column="completed_qty"/>
+        <result property="priority" column="priority"/>
+        <result property="isUrgent" column="is_urgent"/>
+        <result property="planStatus" column="plan_status"/>
+        <result property="planStartTime" column="plan_start_time"/>
+        <result property="planEndTime" column="plan_end_time"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectPlanVo">
+        select p.plan_id, p.plan_no, p.sales_order_id, o.order_no,
+               p.customer_id, c.customer_name,
+               p.product_id, r.product_name,
+               p.order_quantity, p.inventory_quantity, p.safe_stock, p.required_quantity,
+               p.required_quantity as planned_qty,
+               COALESCE((select sum(completed_qty) from work_order w where w.plan_id = p.plan_id), 0) as completed_qty,
+               p.priority, p.is_urgent, p.plan_status,
+               p.plan_start_time, p.plan_end_time,
+               p.remark, p.create_time, p.update_time
+        from production_plan p
+        left join sales_order o on o.order_id = p.sales_order_id
+        left join customer c on c.customer_id = p.customer_id
+        left join product r on r.product_id = p.product_id
+    </sql>
+
+    <select id="selectProductionPlanList" parameterType="com.ruoyi.mes.dto.ProductionPlanQueryDTO" resultMap="ProductionPlanVOResult">
+        <include refid="selectPlanVo"/>
+        <where>
+            <if test="planNo != null and planNo != ''">and p.plan_no like concat('%',#{planNo},'%')</if>
+            <if test="orderNo != null and orderNo != ''">and o.order_no like concat('%',#{orderNo},'%')</if>
+            <if test="productName != null and productName != ''">and r.product_name like concat('%',#{productName},'%')</if>
+            <if test="salesOrderId != null">and p.sales_order_id = #{salesOrderId}</if>
+            <if test="customerId != null">and p.customer_id = #{customerId}</if>
+            <if test="isUrgent != null">and p.is_urgent = #{isUrgent}</if>
+            <if test="planStatus != null and planStatus != ''">and p.plan_status = #{planStatus}</if>
+            <if test="planStartTimeBegin != null and planStartTimeBegin != ''">and p.plan_start_time &gt;= #{planStartTimeBegin}</if>
+            <if test="planEndTimeEnd != null and planEndTimeEnd != ''">and p.plan_end_time &lt;= #{planEndTimeEnd}</if>
+        </where>
+        order by p.is_urgent desc, p.priority asc, p.create_time asc
+    </select>
+
+    <select id="selectProductionPlanById" parameterType="Long" resultMap="ProductionPlanVOResult">
+        <include refid="selectPlanVo"/> where p.plan_id = #{planId}
+    </select>
+
+    <select id="selectProductionPlanEntityById" parameterType="Long" resultMap="ProductionPlanResult">
+        select * from production_plan where plan_id = #{planId}
+    </select>
+
+    <select id="selectProductionPlanByNo" parameterType="String" resultMap="ProductionPlanResult">
+        select * from production_plan where plan_no = #{planNo} limit 1
+    </select>
+
+    <insert id="insertProductionPlan" parameterType="com.ruoyi.mes.domain.ProductionPlan" useGeneratedKeys="true" keyProperty="planId">
+        insert into production_plan(
+            <if test="planNo != null and planNo != ''">plan_no,</if>
+            <if test="salesOrderId != null">sales_order_id,</if>
+            <if test="customerId != null">customer_id,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="orderQuantity != null">order_quantity,</if>
+            <if test="inventoryQuantity != null">inventory_quantity,</if>
+            <if test="safeStock != null">safe_stock,</if>
+            <if test="requiredQuantity != null">required_quantity,</if>
+            <if test="priority != null">priority,</if>
+            <if test="isUrgent != null">is_urgent,</if>
+            <if test="planStatus != null and planStatus != ''">plan_status,</if>
+            <if test="planStartTime != null">plan_start_time,</if>
+            <if test="planEndTime != null">plan_end_time,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="planNo != null and planNo != ''">#{planNo},</if>
+            <if test="salesOrderId != null">#{salesOrderId},</if>
+            <if test="customerId != null">#{customerId},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="orderQuantity != null">#{orderQuantity},</if>
+            <if test="inventoryQuantity != null">#{inventoryQuantity},</if>
+            <if test="safeStock != null">#{safeStock},</if>
+            <if test="requiredQuantity != null">#{requiredQuantity},</if>
+            <if test="priority != null">#{priority},</if>
+            <if test="isUrgent != null">#{isUrgent},</if>
+            <if test="planStatus != null and planStatus != ''">#{planStatus},</if>
+            <if test="planStartTime != null">#{planStartTime},</if>
+            <if test="planEndTime != null">#{planEndTime},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateProductionPlan" parameterType="com.ruoyi.mes.domain.ProductionPlan">
+        update production_plan
+        <set>
+            <if test="salesOrderId != null">sales_order_id = #{salesOrderId},</if>
+            <if test="customerId != null">customer_id = #{customerId},</if>
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="orderQuantity != null">order_quantity = #{orderQuantity},</if>
+            <if test="inventoryQuantity != null">inventory_quantity = #{inventoryQuantity},</if>
+            <if test="safeStock != null">safe_stock = #{safeStock},</if>
+            <if test="requiredQuantity != null">required_quantity = #{requiredQuantity},</if>
+            <if test="priority != null">priority = #{priority},</if>
+            <if test="isUrgent != null">is_urgent = #{isUrgent},</if>
+            <if test="planStatus != null">plan_status = #{planStatus},</if>
+            <if test="planStartTime != null">plan_start_time = #{planStartTime},</if>
+            <if test="planEndTime != null">plan_end_time = #{planEndTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where plan_id = #{planId}
+    </update>
+
+    <delete id="deleteProductionPlanByIds">
+        delete from production_plan where plan_id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <select id="selectProductionPlanEntityByOrderId" resultMap="ProductionPlanResult">
+        select * from production_plan where sales_order_id = #{orderId}
+    </select>
+
+</mapper>

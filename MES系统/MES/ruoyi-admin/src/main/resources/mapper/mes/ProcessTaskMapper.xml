@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.ProcessTaskMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.ProcessTask" id="TaskResult">
+        <id property="taskId" column="task_id"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="processName" column="process_name"/>
+        <result property="processSeq" column="process_seq"/>
+        <result property="status" column="status"/>
+        <result property="plannedQty" column="planned_qty"/>
+        <result property="goodQty" column="good_qty"/>
+        <result property="badQty" column="bad_qty"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="equipmentId" column="equipment_id"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <select id="selectByWorkOrderId" resultMap="TaskResult">
+        select * from mes_process_task where work_order_id = #{workOrderId} order by process_seq
+    </select>
+
+    <select id="selectById" resultMap="TaskResult">
+        select * from mes_process_task where task_id = #{taskId}
+    </select>
+
+    <select id="selectCurrentTask" resultMap="TaskResult">
+        select * from mes_process_task where work_order_id = #{workOrderId} and process_seq = #{processSeq}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="taskId">
+        insert into mes_process_task(work_order_id,process_name,process_seq,status,planned_qty,good_qty,bad_qty,operator_id,equipment_id,start_time,end_time,create_by,create_time)
+        values(#{workOrderId},#{processName},#{processSeq},#{status},#{plannedQty},#{goodQty},#{badQty},#{operatorId},#{equipmentId},#{startTime},#{endTime},#{createBy},sysdate())
+    </insert>
+
+    <insert id="batchInsert">
+        insert into mes_process_task(work_order_id,process_name,process_seq,status,planned_qty,create_by,create_time) values
+        <foreach collection="list" item="t" separator=",">
+            (#{t.workOrderId},#{t.processName},#{t.processSeq},#{t.status},#{t.plannedQty},#{t.createBy},sysdate())
+        </foreach>
+    </insert>
+
+    <update id="update">
+        update mes_process_task
+        <set>
+            <if test="status != null">status=#{status},</if>
+            <if test="goodQty != null">good_qty=#{goodQty},</if>
+            <if test="badQty != null">bad_qty=#{badQty},</if>
+            <if test="operatorId != null">operator_id=#{operatorId},</if>
+            <if test="equipmentId != null">equipment_id=#{equipmentId},</if>
+            <if test="startTime != null">start_time=#{startTime},</if>
+            <if test="endTime != null">end_time=#{endTime},</if>
+            <if test="remark != null">remark=#{remark},</if>
+            update_time=sysdate()
+        </set>
+        where task_id=#{taskId}
+    </update>
+
+    <delete id="deleteByWorkOrderId">delete from mes_process_task where work_order_id=#{workOrderId}</delete>
+
+    <resultMap type="com.ruoyi.mes.domain.ProcessTask" id="TaskWithWorkOrderResult" extends="TaskResult">
+        <result property="workOrderNo" column="work_order_no"/>
+    </resultMap>
+
+    <select id="selectAllTasks" resultMap="TaskWithWorkOrderResult">
+        select t.*, w.work_order_no
+        from mes_process_task t
+        left join mes_work_order w on t.work_order_id = w.work_order_id
+        <where>
+            <if test="workOrderNo != null and workOrderNo != ''">
+                and w.work_order_no like concat('%', #{workOrderNo}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                and t.status = #{status}
+            </if>
+        </where>
+        order by t.process_seq
+    </select>
+</mapper>

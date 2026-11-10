@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MES 智能制造平台</title>
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f2f5;
+            color: #303133;
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .dashboard-container {
+            padding: 20px 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* ── header ── */
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #303133;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dashboard-header h2 i {
+            color: #409EFF;
+            font-size: 22px;
+        }
+
+        .dashboard-header .time {
+            font-size: 13px;
+            color: #909399;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── stat cards grid ── */
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1600px) {
+            .stat-cards {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .stat-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* ── single stat card ── */
+        .stat-card {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            transition: transform 0.25s, box-shadow 0.25s;
+            cursor: default;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            right: -28px;
+            bottom: -28px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #409EFF;
+            opacity: 0.04;
+            pointer-events: none;
+        }
+
+        /* colored icon box */
+        .card-icon-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #ffffff;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-icon-box.blue   { background: #409EFF; }
+        .card-icon-box.green  { background: #67C23A; }
+        .card-icon-box.cyan   { background: #36CFC9; }
+        .card-icon-box.purple { background: #722ED1; }
+        .card-icon-box.orange { background: #E6A23C; }
+
+        /* value and label */
+        .card-info {
+            flex: 1;
+            min-width: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-info .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #303133;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .card-info .label {
+            font-size: 13px;
+            color: #909399;
+            margin-top: 2px;
+            white-space: nowrap;
+        }
+
+        /* ── chart grid (2 rows x 2 cols) ── */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 320px 320px;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1100px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: 300px 300px 300px 300px;
+            }
+        }
+
+        /* ── chart panel card ── */
+        .chart-panel {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #303133;
+            padding-left: 10px;
+            border-left: 3px solid #409EFF;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+            line-height: 1.3;
+        }
+
+        .chart-box {
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+        }
+
+        /* ── scrollbar ── */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #dcdfe6; border-radius: 3px; }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- header -->
+    <div class="dashboard-header">
+        <h2><i class="fa fa-industry"></i>MES 生产工作台</h2>
+        <div class="time" id="clock">--</div>
+    </div>
+
+    <!-- 6 stat cards -->
+    <div class="stat-cards">
+        <div class="stat-card">
+            <div class="card-icon-box blue"><i class="fa fa-list"></i></div>
+            <div class="card-info">
+                <div class="value" id="stat-orders">--</div>
+                <div class="label">今日工单数</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="card-icon-box green"><i class="fa fa-play-circle"></i></div>
+            <div class="card-info">
+                <div class="value" id="stat-running">--</div>
+                <div class="label">生产中工单</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="card-icon-box cyan"><i class="fa fa-check-circle"></i></div>
+            <div class="card-info">
+                <div class="value" id="stat-finished">--</div>
+                <div class="label">今日完工</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="card-icon-box purple"><i class="fa fa-server"></i></div>
+            <div class="card-info">
+                <div class="value" id="stat-equip">--</div>
+                <div class="label">设备运行率</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="card-icon-box orange"><i class="fa fa-exclamation-triangle"></i></div>
+            <div class="card-info">
+                <div class="value" id="stat-stock">--</div>
+                <div class="label">库存预警</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="card-icon-box green"><i class="fa fa-thumbs-up"></i></div>
+            <div class="card-info">
+                <div class="value" id="stat-yield">--</div>
+                <div class="label">今日良率</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- chart grid: 2 rows x 2 cols -->
+    <div class="chart-grid">
+        <div class="chart-panel">
+            <div class="panel-title">工单状态分布</div>
+            <div class="chart-box" id="chart-order-status"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="panel-title">近7天产量趋势</div>
+            <div class="chart-box" id="chart-production-trend"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="panel-title">设备运行状态</div>
+            <div class="chart-box" id="chart-equip-status"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="panel-title">库存分类统计</div>
+            <div class="chart-box" id="chart-inventory"></div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">var ctx = [[@{/}]];</script>
+<script>
+(function () {
+    if (typeof echarts === 'undefined') {
+        console.error('ECharts not loaded');
+        return;
+    }
+
+    /* ── chart cache ───────────────────────────────── */
+    var chartInstances = {};
+
+    function getChart(id) {
+        if (chartInstances[id]) return chartInstances[id];
+        var dom = document.getElementById(id);
+        if (!dom) return null;
+        var inst = echarts.init(dom);
+        chartInstances[id] = inst;
+        return inst;
+    }
+
+    /* ── api helper ────────────────────────────────── */
+    function apiGet(url) {
+        return fetch(url)
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d && d.code === 0) return d.data;
+                console.warn('API ' + url + ' error:', d);
+                return null;
+            })
+            .catch(function (e) {
+                console.error('API ' + url + ' failed:', e);
+                return null;
+            });
+    }
+
+    /* ── clock ─────────────────────────────────────── */
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function updateClock() {
+        var d = new Date();
+        var el = document.getElementById('clock');
+        if (el) {
+            el.textContent = d.getFullYear() + '-' +
+                pad(d.getMonth() + 1) + '-' +
+                pad(d.getDate()) + ' ' +
+                pad(d.getHours()) + ':' +
+                pad(d.getMinutes()) + ':' +
+                pad(d.getSeconds());
+        }
+    }
+
+    /* ── set text helper ───────────────────────────── */
+    function setText(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+
+    /* ── 1. stats ──────────────────────────────────── */
+    function loadStats() {
+        apiGet(ctx + 'api/mes/dashboard/stats').then(function (d) {
+            if (!d) return;
+            setText('stat-orders', d.todayOrders || 0);
+            setText('stat-running', d.runningOrders || 0);
+            setText('stat-finished', d.todayFinished || 0);
+            setText('stat-equip', (d.equipRunningRate || 0).toFixed(1) + '%');
+            setText('stat-stock', d.lowStock || 0);
+            setText('stat-yield', (d.yieldRate || 0).toFixed(1) + '%');
+        });
+    }
+
+    /* ── 2. 工单状态分布 (pie chart) ──────────────── */
+    function loadOrderStatus() {
+        apiGet(ctx + 'api/mes/dashboard/orderStatus').then(function (d) {
+            if (!d || !d.length) return;
+            var c = getChart('chart-order-status');
+            if (!c) return;
+
+            var statusColors = {
+                'WAITING': '#E6A23C', 'READY': '#409EFF', 'RUNNING': '#67C23A',
+                'FINISHED': '#36CFC9', 'PAUSED': '#F56C6C',
+                '待开工': '#E6A23C', '已就绪': '#409EFF', '生产中': '#67C23A',
+                '已完成': '#36CFC9', '已暂停': '#F56C6C'
+            };
+            var statusNames = {
+                'WAITING': '待开工', 'READY': '已就绪', 'RUNNING': '生产中',
+                'FINISHED': '已完成', 'PAUSED': '已暂停',
+                '待开工': '待开工', '已就绪': '已就绪', '生产中': '生产中',
+                '已完成': '已完成', '已暂停': '已暂停'
+            };
+
+            var data = d.map(function (x) {
+                return {
+                    name: statusNames[x.status] || x.status,
+                    value: x.cnt,
+                    itemStyle: { color: statusColors[x.status] || '#909399' }
+                };
+            });
+
+            c.setOption({
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: '#fff',
+                    borderColor: '#E4E7ED',
+                    textStyle: { color: '#606266', fontSize: 12 },
+                    formatter: '{b}: {c} ({d}%)'
+                },
+                legend: {
+                    orient: 'horizontal',
+                    bottom: 0,
+                    textStyle: { color: '#606266', fontSize: 12 }
+                },
+                series: [{
+                    type: 'pie',
+                    radius: ['45%', '73%'],
+                    center: ['50%', '47%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 3 },
+                    label: { show: true, color: '#606266', fontSize: 12, formatter: '{b}\n{d}%' },
+                    emphasis: {
+                        label: { fontSize: 16, fontWeight: 'bold' },
+                        scaleSize: 6
+                    },
+                    data: data
+                }]
+            });
+        });
+    }
+
+    /* ── 3. 近7天产量趋势 (line chart) ────────────── */
+    function loadProductionTrend() {
+        apiGet(ctx + 'api/mes/dashboard/yieldTrend').then(function (d) {
+            if (!d || !d.length) return;
+            var c = getChart('chart-production-trend');
+            if (!c) return;
+
+            var dates = [], totals = [];
+            d.forEach(function (x) {
+                dates.push(x.dt);
+                var good = parseInt(x.good) || 0;
+                var bad = parseInt(x.bad) || 0;
+                totals.push(good + bad);
+            });
+
+            c.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: '#fff',
+                    borderColor: '#E4E7ED',
+                    textStyle: { color: '#606266', fontSize: 12 },
+                    formatter: function (p) {
+                        return p[0].name + '<br/>产量: ' + p[0].value;
+                    }
+                },
+                grid: { left: '3%', right: '4%', top: 18, bottom: 10, containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: { color: '#909399', fontSize: 11 },
+                    axisLine: { lineStyle: { color: '#E4E7ED' } },
+                    axisTick: { show: false }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { color: '#909399', fontSize: 11 },
+                    splitLine: { lineStyle: { color: '#EBEEF5', type: 'dashed' } },
+                    axisLine: { show: false },
+                    axisTick: { show: false }
+                },
+                series: [{
+                    type: 'line',
+                    data: totals,
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    lineStyle: { color: '#409EFF', width: 2.5 },
+                    itemStyle: { color: '#409EFF' },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(64,158,255,0.22)' },
+                            { offset: 1, color: 'rgba(64,158,255,0.01)' }
+                        ])
+                    }
+                }]
+            });
+        });
+    }
+
+    /* ── 4. 设备运行状态 (doughnut chart) ──────────── */
+    function loadEquipStatus() {
+        apiGet(ctx + 'api/mes/dashboard/equipStatus').then(function (d) {
+            if (!d || !d.length) return;
+            var c = getChart('chart-equip-status');
+            if (!c) return;
+
+            var equipColors = {
+                'RUNNING': '#67C23A', 'IDLE': '#E6A23C', 'ERROR': '#F56C6C',
+                'MAINTENANCE': '#722ED1',
+                '运行中': '#67C23A', '空闲': '#E6A23C', '故障': '#F56C6C',
+                '保养中': '#722ED1'
+            };
+            var equipNames = {
+                'RUNNING': '运行中', 'IDLE': '空闲', 'ERROR': '故障',
+                'MAINTENANCE': '保养中',
+                '运行中': '运行中', '空闲': '空闲', '故障': '故障', '保养中': '保养中'
+            };
+
+            var data = d.map(function (x) {
+                return {
+                    name: equipNames[x.status] || x.status,
+                    value: x.cnt,
+                    itemStyle: { color: equipColors[x.status] || '#909399' }
+                };
+            });
+
+            c.setOption({
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: '#fff',
+                    borderColor: '#E4E7ED',
+                    textStyle: { color: '#606266', fontSize: 12 },
+                    formatter: '{b}: {c} 台 ({d}%)'
+                },
+                legend: {
+                    orient: 'horizontal',
+                    bottom: 0,
+                    textStyle: { color: '#606266', fontSize: 12 }
+                },
+                series: [{
+                    type: 'pie',
+                    radius: ['50%', '75%'],
+                    center: ['50%', '47%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 3 },
+                    label: { show: false },
+                    emphasis: {
+                        label: { show: true, fontSize: 14, fontWeight: 'bold' },
+                        scaleSize: 6
+                    },
+                    data: data
+                }]
+            });
+        });
+    }
+
+    /* ── 5. 库存分类统计 (bar chart) ───────────────── */
+    function loadInventory() {
+        apiGet(ctx + 'api/mes/dashboard/inventoryStats').then(function (d) {
+            if (!d || !d.length) return;
+            var c = getChart('chart-inventory');
+            if (!c) return;
+
+            var names = [], vals = [];
+            d.forEach(function (x) {
+                names.push(x.inventory_type || '未知');
+                vals.push(x.total_qty);
+            });
+
+            c.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: '#fff',
+                    borderColor: '#E4E7ED',
+                    textStyle: { color: '#606266', fontSize: 12 }
+                },
+                grid: { left: '3%', right: '4%', top: 18, bottom: 10, containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    data: names,
+                    axisLabel: { color: '#909399', fontSize: 11 },
+                    axisLine: { lineStyle: { color: '#E4E7ED' } },
+                    axisTick: { show: false }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { color: '#909399', fontSize: 11 },
+                    splitLine: { lineStyle: { color: '#EBEEF5', type: 'dashed' } },
+                    axisLine: { show: false },
+                    axisTick: { show: false }
+                },
+                series: [{
+                    type: 'bar',
+                    data: vals,
+                    barWidth: '45%',
+                    itemStyle: {
+                        borderRadius: [4, 4, 0, 0],
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#409EFF' },
+                            { offset: 1, color: '#79BBFF' }
+                        ])
+                    },
+                    emphasis: {
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#337ECC' },
+                                { offset: 1, color: '#5DA3E6' }
+                            ])
+                        }
+                    }
+                }]
+            });
+        });
+    }
+
+    /* ── refresh all ────────────────────────────────── */
+    function refreshAll() {
+        loadStats();
+        loadOrderStatus();
+        loadProductionTrend();
+        loadEquipStatus();
+        loadInventory();
+    }
+
+    /* ── resize handler ─────────────────────────────── */
+    var resizeTimer = null;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            Object.keys(chartInstances).forEach(function (k) {
+                try { chartInstances[k].resize(); } catch (e) { /* ignore */ }
+            });
+        }, 150);
+    });
+
+    /* ── boot ───────────────────────────────────────── */
+    updateClock();
+    setInterval(updateClock, 30000);
+    refreshAll();
+    setInterval(refreshAll, 30000);
+})();
+</script>
+</body>
+</html>

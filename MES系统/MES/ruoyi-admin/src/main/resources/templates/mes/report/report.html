@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('生产报工')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>工单编号：<input type="text" name="workOrderNo"/></li>
+                <li>产品名称：<input type="text" name="productName"/></li>
+                <li>工序名称：<input type="text" name="processName"/></li>
+                <li>报工类型：<select name="reportType">
+                    <option value="">所有</option>
+                    <option value="NORMAL">普通报工</option>
+                    <option value="REPAIR">补报</option>
+                    <option value="START">开工</option>
+                    <option value="PROGRESS">进度</option>
+                    <option value="FINISH">完工</option>
+                </select></li>
+                <li>状态：<select name="status">
+                    <option value="">所有</option>
+                    <option value="REPORTED">已报工</option>
+                    <option value="INSPECTED">已质检</option>
+                    <option value="COMPLETED">已完成</option>
+                </select></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success btn-rounded" onclick="$.operate.addTab()"><i class="fa fa-plus"></i> 新增报工</a>
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()"><i class="fa fa-remove"></i> 删除</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+
+    <!-- 质检弹窗 -->
+    <div class="modal fade" id="inspectModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            <h4 class="modal-title">质检操作</h4></div>
+        <div class="modal-body">
+            <form class="form-horizontal">
+                <input type="hidden" id="inspReportId"/>
+                <div class="form-group"><label class="col-sm-3 control-label">质检结果：</label>
+                    <div class="col-sm-8"><select id="inspResult" class="form-control">
+                        <option value="">请选择</option><option value="PASS">合格</option><option value="FAIL">不合格</option>
+                    </select></div></div>
+                <div class="form-group"><label class="col-sm-3 control-label">质检人：</label>
+                    <div class="col-sm-8"><input type="text" id="inspName" class="form-control"/></div></div>
+                <div class="form-group"><label class="col-sm-3 control-label">备注：</label>
+                    <div class="col-sm-8"><textarea id="inspRemark" class="form-control" rows="2"></textarea></div></div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" onclick="submitInspect()">确认</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+        </div>
+    </div></div></div>
+
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/report"; var apiPrefix = ctx + "api/mes/report";
+        $(function() {
+            $.table.init({
+                url: apiPrefix + "/list", createUrl: prefix + "/add",
+                updateUrl: prefix + "/edit/", removeUrl: apiPrefix + "/delete",
+                sortName: "reportTime", sortOrder: "desc", striped: true, modalName: "报工",
+                columns: [
+                    { checkbox: true },
+                    { field: 'reportId', title: 'ID', visible: false },
+                    { field: 'workOrderNo', title: '工单编号', sortable: true },
+                    { field: 'productName', title: '产品名称' },
+                    { field: 'processName', title: '工序名称' },
+                    { field: 'equipmentName', title: '设备' },
+                    { field: 'operatorName', title: '操作员' },
+                    { field: 'goodQty', title: '良品数', align: 'center' },
+                    { field: 'badQty', title: '不良品数', align: 'center' },
+                    { field: 'reportType', title: '报工类型', align: 'center',
+                        formatter: function(v) {
+                            var m = {'NORMAL':'primary','REPAIR':'warning','START':'info','PROGRESS':'warning','FINISH':'success'};
+                            var t = {'NORMAL':'普通报工','REPAIR':'补报','START':'开工','PROGRESS':'进度','FINISH':'完工'};
+                            return '<span class="label label-' + (m[v]||'default') + '">' + (t[v]||v) + '</span>';
+                        }
+                    },
+                    { field: 'status', title: '状态', align: 'center',
+                        formatter: function(v) {
+                            var m = {'REPORTED':'primary','INSPECTED':'success','COMPLETED':'info'};
+                            var t = {'REPORTED':'已报工','INSPECTED':'已质检','COMPLETED':'已完成'};
+                            return '<span class="label label-' + (m[v]||'default') + '">' + (t[v]||v) + '</span>';
+                        }
+                    },
+                    { field: 'qualityResult', title: '质检结果', align: 'center',
+                        formatter: function(v, r) {
+                            if (!v) return '<span class="label label-default">未质检</span>';
+                            var m = {'PASS':'success','FAIL':'danger'};
+                            var t = {'PASS':'合格','FAIL':'不合格'};
+                            var s = '<span class="label label-' + (m[v]||'default') + '">' + (t[v]||v) + '</span>';
+                            if (r.inspector) s += ' <small>' + r.inspector + '</small>';
+                            return s;
+                        }
+                    },
+                    { field: 'reportTime', title: '报工时间', sortable: true },
+                    { field: 'createTime', title: '创建时间' },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            var btns = '';
+                            if (r.status == 'REPORTED') {
+                                btns += '<a class="btn btn-primary btn-xs" onclick="openEdit(\'' + r.reportId + '\')"><i class="fa fa-edit"></i> 编辑</a> ';
+                                btns += '<a class="btn btn-warning btn-xs" onclick="openInspect(\'' + r.reportId + '\')"><i class="fa fa-check-circle"></i> 质检</a> ';
+                            }
+                            btns += '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + r.reportId + '\')"><i class="fa fa-remove"></i> 删除</a>';
+                            return btns;
+                        }
+                    }
+                ]
+            });
+        });
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+
+        function openEdit(reportId) {
+            $.modal.openTab("编辑报工", prefix + "/edit/" + reportId);
+        }
+
+        function openInspect(reportId) {
+            $("#inspReportId").val(reportId);
+            $("#inspResult").val('');
+            $("#inspName").val('');
+            $("#inspRemark").val('');
+            $("#inspectModal").modal("show");
+        }
+
+        function submitInspect() {
+            var reportId = $("#inspReportId").val();
+            var result = $("#inspResult").val();
+            var inspector = $("#inspName").val();
+            var remark = $("#inspRemark").val();
+            if (!result) { $.modal.msgWarning("请选择质检结果喵~"); return; }
+            if (!inspector) { $.modal.msgWarning("请填写质检人喵~"); return; }
+            $.ajax({
+                url: apiPrefix + "/inspect", type: 'POST',
+                data: { reportId: reportId, qualityResult: result, inspector: inspector, qualityRemark: remark },
+                success: function(res) {
+                    if (res.code == 0) {
+                        $.modal.msgSuccess("质检完成喵~");
+                        $("#inspectModal").modal("hide");
+                        $.table.refresh();
+                    } else {
+                        $.modal.msgError(res.msg || "操作失败喵~");
+                    }
+                },
+                error: function() { $.modal.msgError("系统错误喵~"); }
+            });
+        }
+    </script>
+</body>
+</html>

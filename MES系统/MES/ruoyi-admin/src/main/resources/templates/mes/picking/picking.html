@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('领料管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>领料单号：<input type="text" name="pickingNo"/></li>
+                <li>工单编号：<input type="text" name="workOrderNo"/></li>
+                <li>状态：<select name="pickingStatus">
+                    <option value="">全部</option>
+                    <option value="PENDING">待领料</option>
+                    <option value="PROCESSING">领料中</option>
+                    <option value="FINISHED">已完成</option>
+                    <option value="CANCEL">已取消</option>
+                </select></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()"><i class="fa fa-remove"></i> 删除</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/picking"; var apiPrefix = ctx + "api/mes/picking";
+        $(function() {
+            $.table.init({
+                url: apiPrefix + "/list", removeUrl: apiPrefix + "/delete",
+                sortName: "createTime", sortOrder: "desc", striped: true, modalName: "领料单",
+                columns: [
+                    { checkbox: true },
+                    { field: 'pickingId', visible: false },
+                    { field: 'pickingNo', title: '领料单号', sortable: true,
+                        formatter: function(v, r) { return '<a onclick="showDetail(' + r.pickingId + ')">' + v + '</a>'; }
+                    },
+                    { field: 'workOrderNo', title: '工单编号' },
+                    { field: 'pickingStatus', title: '状态', align: 'center',
+                        formatter: function(v) {
+                            var m = {'PENDING':'primary','PROCESSING':'warning','FINISHED':'success','CANCEL':'danger',
+                                     'WAITING':'primary','PARTIAL':'warning','PICKED':'success'};
+                            var t = {'PENDING':'待领料','PROCESSING':'领料中','FINISHED':'已完成','CANCEL':'已取消',
+                                     'WAITING':'待领料','PARTIAL':'部分领料','PICKED':'已领料'};
+                            return '<span class="label label-' + (m[v]||'default') + '">' + (t[v]||v) + '</span>';
+                        }
+                    },
+                    { field: 'pickingBy', title: '领料人' },
+                    { field: 'pickingTime', title: '领料时间' },
+                    { field: 'createTime', title: '创建时间', sortable: true },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            var btns = '<a class="btn btn-info btn-xs" onclick="showDetail(' + r.pickingId + ')"><i class="fa fa-eye"></i> 查看</a> ';
+                            if (r.pickingStatus == 'PENDING' || r.pickingStatus == 'PROCESSING' || r.pickingStatus == 'WAITING' || r.pickingStatus == 'PARTIAL') {
+                                btns += '<a class="btn btn-success btn-xs" onclick="goConfirm(' + r.pickingId + ')"><i class="fa fa-check"></i> 领料确认</a> ';
+                            }
+                            btns += '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + r.pickingId + '\')"><i class="fa fa-remove"></i>删除</a>';
+                            return btns;
+                        }
+                    }
+                ]
+            });
+        });
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+
+        function showDetail(pickingId) {
+            $.modal.openTab("领料详情", prefix + "/detail/" + pickingId);
+        }
+
+        function goConfirm(pickingId) {
+            $.modal.openTab("领料确认", prefix + "/detail/" + pickingId);
+        }
+    </script>
+</body>
+</html>

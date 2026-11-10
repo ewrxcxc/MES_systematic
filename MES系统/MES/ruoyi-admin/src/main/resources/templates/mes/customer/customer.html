@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:include="include :: header('客户管理')" />
+</head>
+<body class="gray-bg">
+    <div class="container-div">
+        <div class="row">
+            <div class="col-sm-12 search-collapse">
+                <form id="search-form">
+                    <div class="select-list">
+                        <ul>
+                            <li>
+                                客户编码：<input type="text" name="customerCode"/>
+                            </li>
+                            <li>
+                                客户名称：<input type="text" name="customerName"/>
+                            </li>
+                            <li>
+                                联系人：<input type="text" name="contactName"/>
+                            </li>
+                            <li>
+                                状态：<select name="status">
+                                    <option value="">所有</option>
+                                    <option value="0">正常</option>
+                                    <option value="1">停用</option>
+                                </select>
+                            </li>
+                            <li>
+                                <a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                                <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
+                            </li>
+                        </ul>
+                    </div>
+                </form>
+            </div>
+
+            <div class="btn-group-sm" id="toolbar" role="group">
+                <a class="btn btn-success btn-rounded" onclick="$.operate.addTab()">
+                    <i class="fa fa-plus"></i> 新增
+                </a>
+                <a class="btn btn-primary btn-rounded single disabled" onclick="$.operate.editTab()">
+                    <i class="fa fa-edit"></i> 修改
+                </a>
+                <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()">
+                    <i class="fa fa-remove"></i> 删除
+                </a>
+                <a class="btn btn-warning btn-rounded" onclick="$.table.exportExcel()">
+                    <i class="fa fa-download"></i> 导出
+                </a>
+            </div>
+
+            <div class="col-sm-12 select-table table-striped">
+                <table id="bootstrap-table"></table>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/customer";
+        var apiPrefix = ctx + "api/mes/customer";
+
+        $(function() {
+            queryList();
+        });
+
+        function queryList() {
+            var options = {
+                url: apiPrefix + "/list",
+                createUrl: prefix + "/add",
+                updateUrl: prefix + "/edit/{id}",
+                removeUrl: apiPrefix + "/delete",
+                exportUrl: apiPrefix + "/export",
+                sortName: "createTime",
+                sortOrder: "desc",
+                striped: true,
+                modalName: "客户",
+                columns: [
+                    { checkbox: true },
+                    { field: 'customerId', title: 'ID', visible: false },
+                    { field: 'customerCode', title: '客户编码', sortable: true },
+                    { field: 'customerName', title: '客户名称', sortable: true,
+                        formatter: function(value, row) {
+                            return '<a href="javascript:void(0)" onclick="$.operate.editTab(\'' + row.customerId + '\')">' + value + '</a>';
+                        }
+                    },
+                    { field: 'contactName', title: '联系人' },
+                    { field: 'contactPhone', title: '联系电话' },
+                    { field: 'customerPriority', title: '优先级', align: 'center',
+                        formatter: function(value) {
+                            var m = {1:'A级', 2:'B级', 3:'C级'};
+                            var c = {1:'danger', 2:'warning', 3:'info'};
+                            return '<span class="label label-'+(c[value]||'default')+'">'+(m[value]||value)+'</span>';
+                        }
+                    },
+                    { field: 'email', title: '邮箱', visible: false },
+                    { field: 'address', title: '地址', visible: false },
+                    { field: 'status', title: '状态', align: 'center',
+                        formatter: function(value) {
+                            return value == 0 ? '<span class="label label-primary">正常</span>' : '<span class="label label-danger">停用</span>';
+                        }
+                    },
+                    { field: 'createTime', title: '创建时间', sortable: true },
+                    { title: '操作', align: 'center',
+                        formatter: function(value, row) {
+                            return '<a class="btn btn-primary btn-xs" onclick="$.operate.editTab(\'' + row.customerId + '\')"><i class="fa fa-edit"></i>编辑</a> '
+                                + '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + row.customerId + '\')"><i class="fa fa-remove"></i>删除</a>';
+                        }
+                    }
+                ]
+            };
+            $.table.init(options);
+        }
+
+        function resetForm() {
+            $("#search-form")[0].reset();
+            $.table.search();
+        }
+    </script>
+</body>
+</html>

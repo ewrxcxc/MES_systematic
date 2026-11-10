@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('领料单详情')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <div class="box box-main">
+            <div class="box-header"><div class="box-title"><i class="fa fa-list-alt"></i> 领料单信息</div></div>
+            <div class="box-body" id="picking-info"><p>加载中...</p></div>
+        </div>
+        <div class="box box-main" style="margin-top:10px;">
+            <div class="box-header">
+                <div class="box-title"><i class="fa fa-list"></i> 领料明细</div>
+                <div class="box-tools pull-right">
+                    <button class="btn btn-success btn-sm" id="btnConfirm" onclick="doConfirm()" disabled><i class="fa fa-check"></i> 确认领料</button>
+                </div>
+            </div>
+            <div class="box-body">
+                <table class="table table-bordered table-striped">
+                    <thead><tr>
+                        <th>物料编码</th><th>物料名称</th><th>BOM用量</th><th>需求数量</th><th>当前库存</th><th>库位</th><th>实发数量</th>
+                    </tr></thead>
+                    <tbody id="detail-tbody"><tr><td colspan="7" class="text-center">加载中...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var pickingId = [[${pickingId}]];
+        var apiPrefix = ctx + "api/mes/picking";
+        var pickingData = null;
+
+        $(function() { loadPicking(); });
+
+        function loadPicking() {
+            $.get(apiPrefix + "/" + pickingId, function(res) {
+                if (res.code == 0) {
+                    pickingData = res.data;
+                    var s = {'PENDING':'待领料','PROCESSING':'领料中','FINISHED':'已完成','CANCEL':'已取消',
+                             'WAITING':'待领料','PARTIAL':'部分领料','PICKED':'已领料'};
+                    var c = {'PENDING':'info','PROCESSING':'warning','FINISHED':'success','CANCEL':'danger',
+                             'WAITING':'info','PARTIAL':'warning','PICKED':'success'};
+                    var html = '<table class="table table-bordered"><tr>'
+                        + '<td width="15%"><strong>领料单号</strong></td><td width="35%">' + pickingData.pickingNo + '</td>'
+                        + '<td width="15%"><strong>工单编号</strong></td><td width="35%">' + (pickingData.workOrderNo||'') + '</td>'
+                        + '</tr><tr>'
+                        + '<td><strong>状态</strong></td><td><span class="label label-' + (c[pickingData.pickingStatus]||'default') + '">' + (s[pickingData.pickingStatus]||pickingData.pickingStatus) + '</span></td>'
+                        + '<td><strong>领料人</strong></td><td>' + (pickingData.pickingBy||'-') + '</td>'
+                        + '</tr><tr>'
+                        + '<td><strong>领料时间</strong></td><td>' + (pickingData.pickingTime||'-') + '</td>'
+                        + '<td></td><td></td>'
+                        + '</tr></table>';
+                    $('#picking-info').html(html);
+
+                    // 已领料则禁用确认按钮
+                    if (pickingData.pickingStatus == 'FINISHED' || pickingData.pickingStatus == 'CANCEL' || pickingData.pickingStatus == 'PICKED') {
+                        $('#btnConfirm').prop('disabled', true).text(pickingData.pickingStatus == 'CANCEL' ? '已取消' : '已完成');
+                    } else {
+                        $('#btnConfirm').prop('disabled', false);
+                    }
+                }
+            });
+            // 加载明细（含库存）
+            $.get(apiPrefix + "/details/" + pickingId, function(res) {
+                if (res.code == 0) {
+                    var rows = '';
+                    $(res.data).each(function(i, d) {
+                        var actualVal = d.actualQty > 0 ? d.actualQty : d.requiredQty;
+                        var disabled = (d.status == 'FINISHED' || d.status == 'CANCEL') ? 'disabled' : '';
+                        rows += '<tr>'
+                            + '<td>' + d.materialCode + '</td>'
+                            + '<td>' + d.materialName + '</td>'
+                            + '<td>' + (d.bomUsage||0) + '</td>'
+                            + '<td>' + d.requiredQty + '</td>'
+                            + '<td><span class="label label-' + (d.inventoryQty > 0 ? 'info' : 'danger') + '">' + (d.inventoryQty||0) + '</span></td>'
+                            + '<td>' + (d.location||'') + '</td>'
+                            + '<td><input type="number" class="form-control input-sm actual-qty" data-id="' + d.detailId + '" '
+                            + 'data-required="' + d.requiredQty + '" data-max="' + (d.inventoryQty||0) + '" '
+                            + 'data-name="' + d.materialName + '" value="' + actualVal + '" min="0" max="' + (d.inventoryQty||0) + '" '
+                            + 'step="0.01" style="width:120px;" ' + disabled + '/>'
+                            + '<span class="help-block m-b-none" style="display:none;color:#a94442;"></span></td>'
+                            + '</tr>';
+                    });
+                    $('#detail-tbody').html(rows);
+
+                    // 绑定校验
+                    $('.actual-qty').on('input', function() {
+                        var val = parseFloat($(this).val()) || 0;
+                        var max = parseFloat($(this).data('max')) || 0;
+                        var name = $(this).data('name');
+                        var $help = $(this).next('.help-block');
+                        if (val <= 0) {
+                            $help.text('实发数量必须大于0').show();
+                            $(this).css('border-color', '#a94442');
+                        } else if (val > max) {
+                            $help.text('超出库存(' + max + ')').show();
+                            $(this).css('border-color', '#a94442');
+                        } else {
+                            $help.hide();
+                            $(this).css('border-color', '#3c8dbc');
+                        }
+                    });
+                }
+            });
+        }
+
+        function doConfirm() {
+            if (pickingData && (pickingData.pickingStatus == 'FINISHED' || pickingData.pickingStatus == 'CANCEL' || pickingData.pickingStatus == 'PICKED')) {
+                $.modal.msgWarning("该领料单不可操作");
+                return;
+            }
+
+            // 收集明细数据并校验
+            var details = [];
+            var valid = true;
+            $('.actual-qty').each(function() {
+                var val = parseFloat($(this).val()) || 0;
+                var max = parseFloat($(this).data('max')) || 0;
+                var required = parseFloat($(this).data('required')) || 0;
+                var name = $(this).data('name');
+                if (val <= 0) {
+                    $.modal.msgWarning(name + "：实发数量必须大于0");
+                    valid = false;
+                    return false;
+                }
+                if (val > max) {
+                    $.modal.msgWarning(name + "：实发数量(" + val + ")超出库存(" + max + ")");
+                    valid = false;
+                    return false;
+                }
+                details.push({
+                    detailId: parseInt($(this).data('id')),
+                    materialCode: $(this).closest('tr').find('td:eq(0)').text(),
+                    materialName: name,
+                    requiredQty: required,
+                    actualQty: val
+                });
+            });
+            if (!valid) return;
+
+            var pickingBy = prompt("请输入领料人姓名：");
+            if (!pickingBy) return;
+
+            $.modal.confirm("确认领料？将自动扣减库存。", function() {
+                $.ajax({
+                    url: apiPrefix + "/confirm/" + pickingId + "?pickingBy=" + encodeURIComponent(pickingBy),
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(details),
+                    success: function(res) {
+                        if (res.code == 0) {
+                            $.modal.msgSuccess("领料成功");
+                            setTimeout(function() { $.modal.close(); if (window.parent) window.parent.$.table.refresh(); }, 1500);
+                        } else {
+                            $.modal.msgError(res.msg || "操作失败");
+                        }
+                    },
+                    error: function() { $.modal.msgError("操作失败"); }
+                });
+            });
+        }
+    </script>
+</body>
+</html>

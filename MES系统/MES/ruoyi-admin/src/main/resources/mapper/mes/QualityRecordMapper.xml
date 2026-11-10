@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.QualityRecordMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.QualityRecord" id="QualityRecordResult">
+        <id property="id" column="id"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="productName" column="product_name"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="checkType" column="check_type"/>
+        <result property="quantity" column="quantity"/>
+        <result property="defectQuantity" column="defect_quantity"/>
+        <result property="result" column="result"/>
+        <result property="inspector" column="inspector"/>
+        <result property="checkTime" column="check_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectQualityRecordVo">
+        select q.id, q.work_order_id, w.work_order_no,
+               q.product_id, p.product_name,
+               q.check_type, q.quantity, q.defect_quantity,
+               q.result, q.inspector, q.check_time,
+               q.create_by, q.create_time, q.update_by, q.update_time, q.remark
+        from mes_quality_record q
+        left join work_order w on w.work_order_id = q.work_order_id
+        left join product p on p.product_id = q.product_id
+    </sql>
+
+    <select id="selectQualityRecordList" parameterType="com.ruoyi.mes.domain.QualityRecord" resultMap="QualityRecordResult">
+        <include refid="selectQualityRecordVo"/>
+        <where>
+            <if test="workOrderNo != null and workOrderNo != ''">and w.work_order_no like concat('%', #{workOrderNo}, '%')</if>
+            <if test="productName != null and productName != ''">and p.product_name like concat('%', #{productName}, '%')</if>
+            <if test="checkType != null and checkType != ''">and q.check_type = #{checkType}</if>
+            <if test="result != null and result != ''">and q.result = #{result}</if>
+            <if test="params.beginTime != null and params.beginTime != ''">and q.check_time &gt;= #{params.beginTime}</if>
+            <if test="params.endTime != null and params.endTime != ''">and q.check_time &lt;= #{params.endTime}</if>
+        </where>
+        order by q.id desc
+    </select>
+
+    <select id="selectQualityRecordById" parameterType="Long" resultMap="QualityRecordResult">
+        <include refid="selectQualityRecordVo"/> where q.id = #{id}
+    </select>
+
+    <select id="selectPassByWorkOrderId" parameterType="Long" resultMap="QualityRecordResult">
+        <include refid="selectQualityRecordVo"/>
+        where q.work_order_id = #{workOrderId} and q.result = 'PASS'
+        limit 1
+    </select>
+
+    <select id="selectByWorkOrderId" parameterType="Long" resultMap="QualityRecordResult">
+        <include refid="selectQualityRecordVo"/> where q.work_order_id = #{workOrderId}
+    </select>
+
+    <insert id="insertQualityRecord" parameterType="com.ruoyi.mes.domain.QualityRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into mes_quality_record(
+            <if test="workOrderId != null">work_order_id,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="checkType != null and checkType != ''">check_type,</if>
+            <if test="quantity != null">quantity,</if>
+            <if test="defectQuantity != null">defect_quantity,</if>
+            <if test="result != null and result != ''">result,</if>
+            <if test="inspector != null and inspector != ''">inspector,</if>
+            <if test="checkTime != null">check_time,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="workOrderId != null">#{workOrderId},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="checkType != null and checkType != ''">#{checkType},</if>
+            <if test="quantity != null">#{quantity},</if>
+            <if test="defectQuantity != null">#{defectQuantity},</if>
+            <if test="result != null and result != ''">#{result},</if>
+            <if test="inspector != null and inspector != ''">#{inspector},</if>
+            <if test="checkTime != null">#{checkTime},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateQualityRecord" parameterType="com.ruoyi.mes.domain.QualityRecord">
+        update mes_quality_record
+        <set>
+            <if test="workOrderId != null">work_order_id = #{workOrderId},</if>
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="checkType != null">check_type = #{checkType},</if>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="defectQuantity != null">defect_quantity = #{defectQuantity},</if>
+            <if test="result != null">result = #{result},</if>
+            <if test="inspector != null">inspector = #{inspector},</if>
+            <if test="checkTime != null">check_time = #{checkTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where id = #{id}
+    </update>
+
+    <select id="selectPassedWorkOrderIds" resultType="Long">
+        SELECT DISTINCT work_order_id FROM mes_quality_record WHERE result = 'PASS'
+    </select>
+
+    <delete id="deleteQualityRecordByIds">
+        delete from mes_quality_record where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+</mapper>

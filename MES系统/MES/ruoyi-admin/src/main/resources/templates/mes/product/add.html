@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('产品管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <form id="edit-form" class="form-horizontal" style="padding:0;">
+            <input type="hidden" name="productId" id="productId"/>
+            <input type="hidden" name="specification" id="specField"/>
+            <input type="hidden" name="productModel" id="modelField"/>
+            <div class="form-card">
+                <div class="form-card-header">基础信息</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">产品编码：</label>
+                <div class="col-sm-4"><input type="text" name="productCode" class="form-control" required/></div>
+                <label class="col-sm-2 control-label">产品名称：</label>
+                <div class="col-sm-4"><input type="text" name="productName" id="productName" class="form-control" required/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">规格型号：</label>
+                <div class="col-sm-4">
+                    <input type="text" id="specDisplay" class="form-control" list="specList" placeholder="自动生成或选择"/>
+                    <datalist id="specList">
+                        <option value="标准版"/>
+                        <option value="Pro版"/>
+                        <option value="Lite版"/>
+                        <option value="工业版"/>
+                        <option value="定制版"/>
+                    </datalist>
+                    <span class="help-block" style="font-size:11px;color:#909399;"><i class="fa fa-info-circle"></i> 输入产品名称后自动填充，也可手动选择或输入</span>
+                </div>
+                <label class="col-sm-2 control-label">产品型号：</label>
+                <div class="col-sm-4">
+                    <input type="text" id="modelDisplay" class="form-control" list="modelList" placeholder="自动生成或选择"/>
+                    <datalist id="modelList">
+                        <option value="PRD-001"/>
+                        <option value="PRD-002"/>
+                        <option value="PRD-003"/>
+                        <option value="PRD-100"/>
+                        <option value="PRD-200"/>
+                    </datalist>
+                    <span class="help-block" style="font-size:11px;color:#909399;"><i class="fa fa-info-circle"></i> 输入产品名称后自动填充，也可手动选择或输入</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">单位：</label>
+                <div class="col-sm-4"><select name="unit" class="form-control">
+                    <option value="">请选择</option>
+                    <option value="个">个</option>
+                    <option value="台">台</option>
+                    <option value="套">套</option>
+                    <option value="件">件</option>
+                    <option value="kg">kg</option>
+                    <option value="m">m</option>
+                    <option value="m²">m²</option>
+                </select></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">备注：</label>
+                <div class="col-sm-10"><textarea name="remark" class="form-control" rows="3"></textarea></div>
+            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                    <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                    <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+                </div>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/product"; var apiPrefix = ctx + "api/mes/product";
+        var productId = [[${productId}]];
+
+        $(function() {
+            if (productId) loadData();
+
+            // 监听产品名称输入，自动生成规格型号和产品型号（用户可覆盖）
+            $('#productName').on('input change', function() {
+                var name = $.trim($(this).val());
+                if (name) {
+                    var ts = Date.now();
+                    // 仅在用户未手动修改时自动填充
+                    if (!$('#specDisplay').data('manual')) {
+                        $('#specDisplay').val(name + '-标准版');
+                        $('#specField').val(name + '-标准版');
+                    }
+                    if (!$('#modelDisplay').data('manual')) {
+                        $('#modelDisplay').val('PRD-' + (ts % 100000));
+                        $('#modelField').val('PRD-' + (ts % 100000));
+                    }
+                } else {
+                    if (!$('#specDisplay').data('manual')) { $('#specDisplay').val(''); $('#specField').val(''); }
+                    if (!$('#modelDisplay').data('manual')) { $('#modelDisplay').val(''); $('#modelField').val(''); }
+                }
+            });
+            // 用户手动修改时标记，不再自动覆盖
+            $('#specDisplay').on('input change', function() { $(this).data('manual', true); $('#specField').val($(this).val()); });
+            $('#modelDisplay').on('input change', function() { $(this).data('manual', true); $('#modelField').val($(this).val()); });
+        });
+
+        function loadData() {
+            $.get(apiPrefix + "/" + productId, function(res) {
+                if (res.code == 0) {
+                    $.each(res.data, function(k, v) {
+                        var input = $("#edit-form [name='" + k + "']");
+                        if (input.length > 0) input.val(v);
+                    });
+                    // 回显自动生成字段
+                    if (res.data.specification) { $('#specDisplay').val(res.data.specification); $('#specField').val(res.data.specification); $('#specDisplay').data('manual', true); }
+                    if (res.data.productModel) { $('#modelDisplay').val(res.data.productModel); $('#modelField').val(res.data.productModel); $('#modelDisplay').data('manual', true); }
+                }
+            });
+        }
+
+        function submitHandler() {
+            // 同步隐藏字段
+            $('#specField').val($('#specDisplay').val());
+            $('#modelField').val($('#modelDisplay').val());
+
+            var data = {}; $("#edit-form").serializeArray().forEach(function(i) { data[i.name] = i.value; });
+            if (!data.productCode || $.trim(data.productCode) == '') { $.modal.msgWarning("请输入产品编码"); return; }
+            if (!data.productName || $.trim(data.productName) == '') { $.modal.msgWarning("请输入产品名称"); return; }
+            if (!data.unit || data.unit == '') { $.modal.msgWarning("请选择单位"); return; }
+            if (productId) { data.productId = productId; $.operate.save(apiPrefix + "/update", data); }
+            else { $.operate.save(apiPrefix + "/create", data); }
+        }
+        function resetForm() {
+            $("#edit-form")[0].reset();
+            if (productId) { $("#productId").val(productId); }
+        }
+    </script>
+</body>
+</html>

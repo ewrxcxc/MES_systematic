@@ -1,0 +1,5 @@
+INSERT INTO product (product_id,product_code,product_name,specification,unit,create_by,create_time,update_by,update_time,remark) VALUES (1,'P001','黑色折叠','铝合金黑色款','个','','2026-05-24 13:02:38','',NULL,NULL);
+INSERT INTO product (product_id,product_code,product_name,specification,unit,create_by,create_time,update_by,update_time,remark) VALUES (2,'P002','CNC金属加重底座','银色加长版','个','','2026-05-24 13:02:38','',NULL,NULL);
+INSERT INTO product (product_id,product_code,product_name,specification,unit,create_by,create_time,update_by,update_time,remark) VALUES (3,'P003','全金属-紫色','碳钢专业版','个','','2026-05-24 13:02:38','',NULL,NULL);
+INSERT INTO product (product_id,product_code,product_name,specification,unit,create_by,create_time,update_by,update_time,remark) VALUES (4,'P004','720度旋转可折叠','加固款','个','','2026-05-24 13:02:38','',NULL,NULL);
+INSERT INTO product (product_id,product_code,product_name,specification,unit,create_by,create_time,update_by,update_time,remark) VALUES (5,'P005','平板专用','磁吸版','个','','2026-05-24 13:02:38','',NULL,NULL);

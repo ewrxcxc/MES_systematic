@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('发货管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <form id="edit-form" class="form-horizontal" style="padding:0;">
+            <div class="form-card">
+                <div class="form-card-header">基础信息</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">销售订单：</label>
+                <div class="col-sm-4"><select name="orderId" class="form-control" required></select></div>
+                <label class="col-sm-2 control-label">发货单号：</label>
+                <div class="col-sm-4"><input type="text" name="shipmentNo" class="form-control" placeholder="自动生成"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">快递公司：</label>
+                <div class="col-sm-4"><input type="text" name="expressCompany" class="form-control" required/></div>
+                <label class="col-sm-2 control-label">物流单号：</label>
+                <div class="col-sm-4"><input type="text" name="trackingNo" class="form-control" required/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">发货数量：</label>
+                <div class="col-sm-4"><input type="number" name="shipmentQty" class="form-control" required/></div>
+                <label class="col-sm-2 control-label">操作员ID：</label>
+                <div class="col-sm-4"><input type="number" name="operatorId" class="form-control"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">发货时间：</label>
+                <div class="col-sm-4"><input type="datetime-local" name="shipmentTime" class="form-control"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">备注：</label>
+                <div class="col-sm-10"><textarea name="remark" class="form-control" rows="3"></textarea></div>
+            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                    <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                    <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+                </div>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/shipment"; var apiPrefix = ctx + "api/mes/shipment";
+        $(function() {
+            $.post(ctx + "api/mes/order/list", {pageSize: 999}, function(res) {
+                if (res.code == 0) $(res.rows).each(function(i, p) { $("#edit-form [name='orderId']").append('<option value="' + p.orderId + '">' + p.orderNo + '</option>'); });
+            });
+        });
+        function submitHandler() {
+            var data = {}; $("#edit-form").serializeArray().forEach(function(i) { data[i.name] = i.value; });
+            if (!data.orderId || data.orderId == '') { $.modal.msgWarning("请选择销售订单"); return; }
+            if (!data.expressCompany || $.trim(data.expressCompany) == '') { $.modal.msgWarning("请输入快递公司"); return; }
+            if (!data.trackingNo || $.trim(data.trackingNo) == '') { $.modal.msgWarning("请输入物流单号"); return; }
+            if (!data.shipmentQty || parseFloat(data.shipmentQty) <= 0) { $.modal.msgWarning("发货数量必须大于0"); return; }
+            $.operate.save(apiPrefix + "/create", data);
+        }
+        function resetForm() { $("#edit-form")[0].reset(); }
+    </script>
+</body>
+</html>

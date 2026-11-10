@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('计划详情')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <div class="box box-main">
+            <div class="box-header with-border">
+                <div class="box-title"><i class="fa fa-calendar"></i> 生产计划详情 — <span th:text="${plan.planNo}"></span></div>
+            </div>
+            <div class="box-body">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <td width="15%"><strong>计划编号</strong></td>
+                            <td width="35%"><span th:text="${plan.planNo}"></span></td>
+                            <td width="15%"><strong>销售订单号</strong></td>
+                            <td width="35%"><span th:text="${plan.orderNo}"></span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>客户</strong></td>
+                            <td><span th:text="${plan.customerName}"></span></td>
+                            <td><strong>产品</strong></td>
+                            <td><span th:text="${plan.productName}"></span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>计划数量</strong></td>
+                            <td>
+                                <span class="badge bg-blue" th:text="${plan.plannedQty}">0</span>
+                            </td>
+                            <td><strong>完成数量</strong></td>
+                            <td>
+                                <span class="badge bg-green" th:text="${plan.completedQty}">0</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>状态</strong></td>
+                            <td>
+                                <span th:if="${plan.planStatus == '已审核'}" class="label label-primary">已审核</span>
+                                <span th:if="${plan.planStatus == '已排产'}" class="label label-warning">已排产</span>
+                                <span th:if="${plan.planStatus == '生产中'}" class="label label-warning">生产中</span>
+                                <span th:if="${plan.planStatus == '已完成'}" class="label label-success">已完成</span>
+                                <span th:if="${plan.planStatus == '已取消'}" class="label label-default">已取消</span>
+                                <span th:unless="${plan.planStatus == '已审核' or plan.planStatus == '已排产' or plan.planStatus == '生产中' or plan.planStatus == '已完成' or plan.planStatus == '已取消'}"
+                                      class="label label-default" th:text="${plan.planStatus}"></span>
+                            </td>
+                            <td><strong>优先级</strong></td>
+                            <td>
+                                <span th:if="${plan.priority == 1}" class="label label-danger">A级</span>
+                                <span th:if="${plan.priority == 2}" class="label label-warning">B级</span>
+                                <span th:if="${plan.priority == 3 or plan.priority == null}" class="label label-info">C级</span>
+                                <span th:unless="${plan.priority == 1 or plan.priority == 2 or plan.priority == 3}"
+                                      class="label label-default" th:text="${plan.priority}"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>计划开始</strong></td>
+                            <td>
+                                <div class="input-group" style="max-width:220px;">
+                                    <input type="text" name="planStartTime" id="planStart" class="form-control time-input"
+                                           data-type="datetime" data-format="yyyy-MM-dd HH:mm:ss" autocomplete="off"
+                                           th:value="${plan.planStartTime != null ? #dates.format(plan.planStartTime, 'yyyy-MM-dd HH:mm:ss') : ''}"/>
+                                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                </div>
+                            </td>
+                            <td><strong>计划结束</strong></td>
+                            <td>
+                                <div class="input-group" style="max-width:220px;">
+                                    <input type="text" name="planEndTime" id="planEnd" class="form-control time-input"
+                                           data-type="datetime" data-format="yyyy-MM-dd HH:mm:ss" autocomplete="off"
+                                           th:value="${plan.planEndTime != null ? #dates.format(plan.planEndTime, 'yyyy-MM-dd HH:mm:ss') : ''}"/>
+                                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>交货日期</strong></td>
+                            <td><span id="deliveryDateDisplay" class="text-warning">加载中...</span></td>
+                            <td><strong></strong></td>
+                            <td>
+                                <button class="btn btn-primary btn-sm" id="btnSaveTime" onclick="savePlanTime()">
+                                    <i class="fa fa-save"></i> 保存时间
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>创建时间</strong></td>
+                            <td><span th:text="${plan.createTime != null ? #dates.format(plan.createTime, 'yyyy-MM-dd HH:mm:ss') : ''}"></span></td>
+                            <td><strong>备注</strong></td>
+                            <td><span th:text="${plan.remark}"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="row" style="margin-top:15px;">
+                    <div class="col-sm-6">
+                        <div class="progress-group">
+                            <span class="progress-text"><i class="fa fa-tasks"></i> 完成进度</span>
+                            <span class="progress-number">
+                                <b th:text="${plan.plannedQty > 0 ? (plan.completedQty != null ? (plan.completedQty * 100 / plan.plannedQty) : 0) : 0}">0</b>%
+                            </span>
+                            <div class="progress" style="margin:5px 0;">
+                                <div class="progress-bar progress-bar-striped"
+                                     th:style="'width:' + (${plan.plannedQty > 0 ? (plan.completedQty != null ? (plan.completedQty * 100 / plan.plannedQty) : 0) : 0}) + '%'"
+                                     th:text="${plan.plannedQty > 0 ? (plan.completedQty != null ? (plan.completedQty * 100 / plan.plannedQty) : 0) : 0} + '%'">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <table class="table table-bordered table-condensed" style="margin:0;">
+                            <tr>
+                                <td><strong>待生产数量</strong></td>
+                                <td th:with="pq=${plan.plannedQty != null ? plan.plannedQty : 0}, cq=${plan.completedQty != null ? plan.completedQty : 0}"
+                                    th:text="${pq - cq > 0 ? pq - cq : 0}">0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>已完成数量</strong></td>
+                                <td th:text="${plan.completedQty != null ? plan.completedQty : 0}">0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>订单数量</strong></td>
+                                <td th:text="${plan.orderQuantity}">0</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var planId = [[${plan.planId}]];
+        var apiPrefix = ctx + "api/mes/plan";
+        var salesOrderId = [[${plan.salesOrderId != null ? plan.salesOrderId : 'null'}]];
+        var deliveryDate = null;
+
+        $(function() {
+            // 获取交货日期
+            if (salesOrderId) {
+                $.get(ctx + "api/mes/order/" + salesOrderId, function(res) {
+                    if (res.code == 0 && res.data && res.data.dueDate) {
+                        deliveryDate = res.data.dueDate;
+                        $("#deliveryDateDisplay").text(deliveryDate);
+                    } else {
+                        $("#deliveryDateDisplay").text("无");
+                    }
+                });
+            } else {
+                $("#deliveryDateDisplay").text("无关联订单");
+            }
+
+            // 如果时间为空，设置默认值
+            if (!$("#planStart").val()) {
+                var now = new Date();
+                var s = now.getFullYear() + '-' + pad2(now.getMonth()+1) + '-' + pad2(now.getDate()) + ' '
+                      + pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds());
+                $("#planStart").val(s);
+            }
+            if (!$("#planEnd").val()) {
+                var tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                var e = tomorrow.getFullYear() + '-' + pad2(tomorrow.getMonth()+1) + '-' + pad2(tomorrow.getDate()) + ' '
+                      + pad2(tomorrow.getHours()) + ':' + pad2(tomorrow.getMinutes()) + ':' + pad2(tomorrow.getSeconds());
+                $("#planEnd").val(e);
+            }
+        });
+
+        function pad2(n) { return n < 10 ? '0' + n : n; }
+
+        function savePlanTime() {
+            var planStart = $("#planStart").val();
+            var planEnd = $("#planEnd").val();
+            if (!planStart) { $.modal.alertWarning("请选择计划开始时间"); return; }
+            if (!planEnd) { $.modal.alertWarning("请选择计划结束时间"); return; }
+
+            // 校验：不能晚于交货日期
+            if (deliveryDate) {
+                var due = deliveryDate.substring(0, 10);
+                var startDate = planStart.substring(0, 10);
+                var endDate = planEnd.substring(0, 10);
+                if (startDate > due) {
+                    $.modal.alertWarning("计划开始时间不能晚于交货日期（" + due + "）");
+                    return;
+                }
+                if (endDate > due) {
+                    $.modal.alertWarning("计划结束时间不能晚于交货日期（" + due + "）");
+                    return;
+                }
+            }
+            if (planEnd < planStart) {
+                $.modal.alertWarning("计划结束时间不能早于计划开始时间（" + planStart + "）");
+                return;
+            }
+
+            $.operate.save(apiPrefix + "/updateTime/" + planId, {
+                planStartTime: planStart,
+                planEndTime: planEnd
+            });
+        }
+    </script>
+</body>
+</html>

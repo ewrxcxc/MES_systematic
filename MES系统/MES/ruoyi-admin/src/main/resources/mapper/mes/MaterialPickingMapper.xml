@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.MaterialPickingMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.MaterialPicking" id="PickingResult">
+        <id property="pickingId" column="picking_id"/>
+        <result property="pickingNo" column="picking_no"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="planId" column="plan_id"/>
+        <result property="pickingStatus" column="picking_status"/>
+        <result property="pickingBy" column="picking_by"/>
+        <result property="pickingTime" column="picking_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.domain.MaterialPickingDetail" id="PickingDetailResult">
+        <id property="detailId" column="detail_id"/>
+        <result property="pickingId" column="picking_id"/>
+        <result property="materialCode" column="material_code"/>
+        <result property="materialName" column="material_name"/>
+        <result property="bomUsage" column="bom_usage"/>
+        <result property="requiredQty" column="required_qty"/>
+        <result property="actualQty" column="actual_qty"/>
+        <result property="unit" column="unit"/>
+        <result property="inventoryId" column="inventory_id"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <select id="selectMaterialPickingList" resultMap="PickingResult">
+        select * from mes_material_picking
+        <where>
+            <if test="pickingNo != null and pickingNo != ''">and picking_no like concat('%',#{pickingNo},'%')</if>
+            <if test="workOrderNo != null and workOrderNo != ''">and work_order_no like concat('%',#{workOrderNo},'%')</if>
+            <if test="pickingStatus != null and pickingStatus != ''">and picking_status = #{pickingStatus}</if>
+        </where>
+        order by picking_id desc
+    </select>
+
+    <select id="selectMaterialPickingById" resultMap="PickingResult">
+        select * from mes_material_picking where picking_id=#{pickingId}
+    </select>
+
+    <select id="selectMaterialPickingByWorkOrderId" resultMap="PickingResult">
+        select * from mes_material_picking where work_order_id=#{workOrderId}
+    </select>
+
+    <insert id="insertMaterialPicking" useGeneratedKeys="true" keyProperty="pickingId">
+        insert into mes_material_picking(
+            <if test="pickingNo!=null and pickingNo!=''">picking_no,</if>
+            <if test="workOrderId!=null">work_order_id,</if>
+            <if test="workOrderNo!=null and workOrderNo!=''">work_order_no,</if>
+            <if test="planId!=null">plan_id,</if>
+            <if test="pickingStatus!=null and pickingStatus!=''">picking_status,</if>
+            <if test="pickingBy!=null and pickingBy!=''">picking_by,</if>
+            <if test="pickingTime!=null">picking_time,</if>
+            <if test="remark!=null and remark!=''">remark,</if>
+            <if test="createBy!=null and createBy!=''">create_by,</if>
+            create_time
+        ) values (
+            <if test="pickingNo!=null and pickingNo!=''">#{pickingNo},</if>
+            <if test="workOrderId!=null">#{workOrderId},</if>
+            <if test="workOrderNo!=null and workOrderNo!=''">#{workOrderNo},</if>
+            <if test="planId!=null">#{planId},</if>
+            <if test="pickingStatus!=null and pickingStatus!=''">#{pickingStatus},</if>
+            <if test="pickingBy!=null and pickingBy!=''">#{pickingBy},</if>
+            <if test="pickingTime!=null">#{pickingTime},</if>
+            <if test="remark!=null and remark!=''">#{remark},</if>
+            <if test="createBy!=null and createBy!=''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateMaterialPicking">
+        update mes_material_picking <set>
+            <if test="pickingStatus!=null">picking_status=#{pickingStatus},</if>
+            <if test="pickingBy!=null">picking_by=#{pickingBy},</if>
+            <if test="pickingTime!=null">picking_time=#{pickingTime},</if>
+            <if test="remark!=null">remark=#{remark},</if>
+            <if test="updateBy!=null and updateBy!=''">update_by=#{updateBy},</if>
+            update_time=sysdate()
+        </set> where picking_id=#{pickingId}
+    </update>
+
+    <delete id="deleteMaterialPickingByIds">
+        delete from mes_material_picking where picking_id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <select id="selectPickingDetailsByPickingId" resultMap="PickingDetailResult">
+        select * from mes_material_picking_detail where picking_id=#{pickingId}
+    </select>
+
+    <insert id="insertPickingDetail" useGeneratedKeys="true" keyProperty="detailId">
+        insert into mes_material_picking_detail(picking_id,material_code,material_name,bom_usage,required_qty,actual_qty,unit,inventory_id,status)
+        values(#{pickingId},#{materialCode},#{materialName},#{bomUsage},#{requiredQty},#{actualQty},#{unit},#{inventoryId},#{status})
+    </insert>
+
+    <update id="updatePickingDetail">
+        update mes_material_picking_detail <set>
+            <if test="actualQty!=null">actual_qty=#{actualQty},</if>
+            <if test="status!=null">status=#{status},</if>
+        </set> where detail_id=#{detailId}
+    </update>
+
+    <delete id="deletePickingDetailsByPickingId">
+        delete from mes_material_picking_detail where picking_id=#{pickingId}
+    </delete>
+</mapper>

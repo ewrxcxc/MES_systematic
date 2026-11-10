@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>MES 智能制造执行系统</title>
+    <meta name="description" content="MES Manufacturing Execution System">
+    <link th:href="@{/css/bootstrap.min.css}" rel="stylesheet"/>
+    <link th:href="@{/css/font-awesome.min.css}" rel="stylesheet"/>
+    <link th:href="@{/css/animate.min.css}" rel="stylesheet"/>
+    <link rel="shortcut icon" th:href="@{favicon.ico}"/>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <style>
+        :root {
+            --bg-deep: #060e1a;
+            --bg-panel: rgba(15, 25, 50, 0.85);
+            --accent: #1890ff;
+            --accent-glow: rgba(24, 144, 255, 0.4);
+            --text: #c8d6e5;
+            --text-dim: #7a8ba0;
+            --input-bg: rgba(10, 22, 40, 0.8);
+            --input-border: rgba(24, 144, 255, 0.2);
+            --input-focus: rgba(24, 144, 255, 0.5);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', sans-serif;
+            background: var(--bg-deep);
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+        }
+        .bg-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+        }
+        .bg-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(24,144,255,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(114,46,209,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(19,194,194,0.03) 0%, transparent 50%);
+            z-index: 1;
+        }
+        .login-wrapper {
+            position: relative; z-index: 10;
+            display: flex; width: 960px; min-height: 520px;
+            border-radius: 12px; overflow: hidden;
+            box-shadow: 0 0 60px rgba(24,144,255,0.12), 0 0 120px rgba(0,0,0,0.3);
+        }
+        .login-left {
+            flex: 1; background: linear-gradient(135deg, #0a1929 0%, #0d2137 50%, #0f2940 100%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 40px; position: relative; overflow: hidden;
+        }
+        .login-left::before {
+            content: '';
+            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background:
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(24,144,255,0.03) 2px, rgba(24,144,255,0.03) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(24,144,255,0.02) 2px, rgba(24,144,255,0.02) 4px);
+            animation: gridMove 20s linear infinite;
+        }
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(40px, 40px); }
+        }
+        .login-left .left-content { position: relative; z-index: 1; text-align: center; }
+        .login-left .mes-icon {
+            width: 80px; height: 80px; margin: 0 auto 20px;
+            border: 2px solid rgba(24,144,255,0.4);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 36px; color: var(--accent);
+            background: rgba(24,144,255,0.08);
+            box-shadow: 0 0 30px rgba(24,144,255,0.15);
+            animation: pulse 3s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 30px rgba(24,144,255,0.15); }
+            50% { box-shadow: 0 0 50px rgba(24,144,255,0.3); }
+        }
+        .login-left h2 {
+            font-size: 20px; color: #e0e8f0; font-weight: 600;
+            letter-spacing: 3px; margin-bottom: 8px;
+        }
+        .login-left .subtitle {
+            font-size: 13px; color: var(--text-dim); letter-spacing: 1px;
+        }
+        .login-left .features {
+            margin-top: 30px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: center;
+        }
+        .login-left .feature-item {
+            text-align: center; color: var(--text-dim); font-size: 11px;
+        }
+        .login-left .feature-item i {
+            display: block; font-size: 24px; color: var(--accent); margin-bottom: 6px;
+            opacity: 0.6;
+        }
+        .login-right {
+            width: 400px; background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            padding: 50px 44px; display: flex; flex-direction: column; justify-content: center;
+            border-left: 1px solid rgba(24,144,255,0.1);
+        }
+        .login-right .login-header {
+            margin-bottom: 32px;
+        }
+        .login-right h3 {
+            font-size: 22px; color: #e0e8f0; font-weight: 600; margin-bottom: 6px;
+        }
+        .login-right .login-desc {
+            font-size: 13px; color: var(--text-dim);
+        }
+        .form-group {
+            margin-bottom: 20px; position: relative;
+        }
+        .form-group .input-icon {
+            position: absolute; left: 14px; top: 14px; color: var(--text-dim);
+            font-size: 15px; z-index: 2; transition: color 0.3s;
+        }
+        .form-control {
+            width: 100%; height: 44px; padding: 0 14px 0 40px;
+            background: var(--input-bg); border: 1px solid var(--input-border);
+            border-radius: 6px; color: #e0e8f0; font-size: 14px;
+            outline: none; transition: all 0.3s;
+        }
+        .form-control:focus {
+            border-color: var(--input-focus); box-shadow: 0 0 0 3px rgba(24,144,255,0.1);
+        }
+        .form-control::placeholder { color: #4a5b70; }
+        .captcha-row {
+            display: flex; gap: 10px;
+        }
+        .captcha-row .form-control {
+            flex: 1; padding-left: 14px;
+        }
+        .captcha-row .captcha-img, .captcha-row .imgcode {
+            width: 110px; height: 44px; border-radius: 6px; cursor: pointer;
+            border: 1px solid var(--input-border);
+        }
+        .checkbox-row {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 24px;
+        }
+        .checkbox-row input[type=checkbox] { accent-color: var(--accent); }
+        .checkbox-row label { font-size: 13px; color: var(--text-dim); cursor: pointer; }
+        .btn-login {
+            width: 100%; height: 44px;
+            background: linear-gradient(135deg, #1890ff, #096dd9);
+            border: none; border-radius: 6px; color: #fff; font-size: 15px;
+            font-weight: 600; letter-spacing: 2px; cursor: pointer;
+            transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #40a9ff, #1890ff);
+            box-shadow: 0 4px 20px rgba(24,144,255,0.4);
+            transform: translateY(-1px);
+        }
+        .btn-login:active { transform: translateY(0); }
+        .login-footer {
+            text-align: center; margin-top: 10px; font-size: 11px; color: #3d4f65;
+        }
+        label.error { color: #f5222d; font-size: 12px; margin-top: 4px; position: inherit; }
+        @media (max-width: 980px) {
+            .login-wrapper { width: 90%; flex-direction: column; }
+            .login-left { display: none; }
+            .login-right { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <canvas class="bg-canvas" id="bgCanvas"></canvas>
+    <div class="bg-overlay"></div>
+
+    <div class="login-wrapper">
+        <div class="login-left">
+            <div class="left-content">
+                <div class="mes-icon"><i class="fa fa-industry"></i></div>
+                <h2>MES 智能制造执行系统</h2>
+                <p class="subtitle">Manufacturing Execution System</p>
+                <div class="features">
+                    <div class="feature-item"><i class="fa fa-cogs"></i>生产管理</div>
+                    <div class="feature-item"><i class="fa fa-bar-chart"></i>数据看板</div>
+                    <div class="feature-item"><i class="fa fa-tachometer"></i>设备监控</div>
+                    <div class="feature-item"><i class="fa fa-check-circle"></i>质量追溯</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="login-right">
+            <div class="login-header">
+                <h3>用户登录</h3>
+                <p class="login-desc">MES Manufacturing Execution System</p>
+            </div>
+            <form id="signupForm" autocomplete="off">
+                <div class="form-group">
+                    <i class="fa fa-user input-icon"></i>
+                    <input type="text" name="username" class="form-control" placeholder="用户名" value="admin" />
+                </div>
+                <div class="form-group">
+                    <i class="fa fa-lock input-icon"></i>
+                    <input type="password" name="password" class="form-control" placeholder="密码" value="admin123" />
+                </div>
+                <div class="captcha-row" th:if="${captchaEnabled==true}">
+                    <input type="text" name="validateCode" class="form-control" placeholder="验证码" maxlength="5" />
+                    <a href="javascript:void(0);" title="点击更换验证码">
+                        <img th:src="@{/captcha/captchaImage(type=${captchaType})}" class="captcha-img imgcode" />
+                    </a>
+                </div>
+                <div class="checkbox-row" th:if="${isRemembered}">
+                    <input type="checkbox" id="rememberme" name="rememberme" />
+                    <label for="rememberme">记住我</label>
+                </div>
+                <button class="btn-login" id="btnSubmit" data-loading="正在验证登录，请稍候...">登 录</button>
+            </form>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        var ctx = [[@{/}]];
+        var captchaType = [[${captchaType}]];
+        var captchaEnabled = [[${captchaEnabled}]];
+        if(window.top!==window.self){
+            alert('未登录或登录超时。请重新登录');
+            window.top.location=window.location;
+        }
+    </script>
+    <script th:src="@{/js/jquery.min.js}"></script>
+    <script th:src="@{/ajax/libs/validate/jquery.validate.min.js}"></script>
+    <script th:src="@{/ajax/libs/layer/layer.min.js}"></script>
+    <script th:src="@{/ajax/libs/blockUI/jquery.blockUI.js}"></script>
+    <script th:src="@{/mes/js/ry-ui.js?v=4.8.3}"></script>
+    <script th:src="@{/mes/login.js}"></script>
+
+    <script>
+    (function() {
+        var canvas = document.getElementById('bgCanvas');
+        var ctx = canvas.getContext('2d');
+        var particles = [];
+        var w, h;
+
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        for (var i = 0; i < 60; i++) {
+            particles.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                r: Math.random() * 1.2 + 0.3,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: (Math.random() - 0.5) * 0.3,
+                alpha: Math.random() * 0.5 + 0.2
+            });
+        }
+
+        function drawLines(p, i) {
+            for (var j = i + 1; j < particles.length; j++) {
+                var p2 = particles[j];
+                var dx = p.x - p2.x;
+                var dy = p.y - p2.y;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 120) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = 'rgba(24,144,255,' + (0.08 * (1 - dist / 120)) + ')';
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, w, h);
+            for (var i = 0; i < particles.length; i++) {
+                var p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0) p.x = w;
+                if (p.x > w) p.x = 0;
+                if (p.y < 0) p.y = h;
+                if (p.y > h) p.y = 0;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(24,144,255,' + p.alpha + ')';
+                ctx.fill();
+                drawLines(p, i);
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    })();
+    </script>
+</body>
+</html>

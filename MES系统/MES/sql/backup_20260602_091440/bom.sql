@@ -1,0 +1,10 @@
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (1,1,'铝合金板','M001','1.50','',NULL,'',NULL,NULL);
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (2,1,'硅胶垫','M002','2.00','',NULL,'',NULL,NULL);
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (3,2,'固定螺丝','M003','4.00','',NULL,'',NULL,NULL);
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (4,3,'旋转转轴','M004','1.00','',NULL,'',NULL,NULL);
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (5,4,'支撑杆','M005','2.00','',NULL,'',NULL,NULL);
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (100,1,'不锈钢棒料','M-001','2.50','admin','2026-05-29 15:03:44','',NULL,'');
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (101,1,'密封垫片','M-002','1.00','admin','2026-05-29 15:03:44','',NULL,'');
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (102,1,'紧固螺栓','M-003','8.00','admin','2026-05-29 15:03:44','',NULL,'');
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (103,2,'不锈钢铸件','M-004','1.00','admin','2026-05-29 15:03:44','',NULL,'');
+INSERT INTO bom (bom_id,product_id,material_name,material_code,usage_qty,create_by,create_time,update_by,update_time,remark) VALUES (104,2,'阀芯组件','M-005','1.00','admin','2026-05-29 15:03:44','',NULL,'');

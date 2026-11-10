@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.QualityTraceMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.QualityTrace" id="TraceResult">
+        <id property="traceId" column="trace_id"/>
+        <result property="traceType" column="trace_type"/>
+        <result property="traceKey" column="trace_key"/>
+        <result property="productId" column="product_id"/>
+        <result property="productCode" column="product_code"/>
+        <result property="planId" column="plan_id"/>
+        <result property="planNo" column="plan_no"/>
+        <result property="orderId" column="order_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="batchNo" column="batch_no"/>
+        <result property="rawBatchNo" column="raw_batch_no"/>
+        <result property="productionDate" column="production_date"/>
+        <result property="inspector" column="inspector"/>
+        <result property="inspectResult" column="inspect_result"/>
+        <result property="traceData" column="trace_data"/>
+        <result property="createTime" column="create_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.domain.BatchInfo" id="BatchResult">
+        <id property="batchId" column="batch_id"/>
+        <result property="batchNo" column="batch_no"/>
+        <result property="materialCode" column="material_code"/>
+        <result property="materialName" column="material_name"/>
+        <result property="materialType" column="material_type"/>
+        <result property="supplierId" column="supplier_id"/>
+        <result property="supplierName" column="supplier_name"/>
+        <result property="quantity" column="quantity"/>
+        <result property="unit" column="unit"/>
+        <result property="produceDate" column="produce_date"/>
+        <result property="receiveDate" column="receive_date"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.domain.DefectRecord" id="DefectResult">
+        <id property="defectId" column="defect_id"/>
+        <result property="defectCode" column="defect_code"/>
+        <result property="defectType" column="defect_type"/>
+        <result property="defectDesc" column="defect_desc"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="processTaskId" column="process_task_id"/>
+        <result property="batchNo" column="batch_no"/>
+        <result property="defectQty" column="defect_qty"/>
+        <result property="severity" column="severity"/>
+        <result property="handler" column="handler"/>
+        <result property="handleResult" column="handle_result"/>
+        <result property="discoverTime" column="discover_time"/>
+        <result property="handleTime" column="handle_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <!-- TraceVO 跨表查询结果 -->
+    <resultMap type="com.ruoyi.mes.vo.TraceVO" id="TraceVOResult">
+        <id property="traceId" column="trace_id"/>
+        <result property="traceType" column="trace_type"/>
+        <result property="orderId" column="order_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="productName" column="product_name"/>
+        <result property="productCode" column="product_code"/>
+        <result property="planId" column="plan_id"/>
+        <result property="planNo" column="plan_no"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="processName" column="process_name"/>
+        <result property="equipmentName" column="equipment_name"/>
+        <result property="operatorName" column="operator_name"/>
+        <result property="reportQty" column="report_qty"/>
+        <result property="goodQty" column="good_qty"/>
+        <result property="badQty" column="bad_qty"/>
+        <result property="inspectResult" column="inspect_result"/>
+        <result property="productionDate" column="production_date"/>
+        <result property="shipmentNo" column="shipment_no"/>
+        <result property="deliveryStatus" column="delivery_status"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <!-- QualityTrace -->
+    <select id="selectTraceList" resultMap="TraceResult">
+        select * from mes_quality_trace
+        <where>
+            <if test="traceType != null and traceType != ''">and trace_type = #{traceType}</if>
+            <if test="orderNo != null and orderNo != ''">and order_no like concat('%',#{orderNo},'%')</if>
+            <if test="workOrderNo != null and workOrderNo != ''">and work_order_no like concat('%',#{workOrderNo},'%')</if>
+            <if test="productCode != null and productCode != ''">and product_code like concat('%',#{productCode},'%')</if>
+            <if test="params.beginTime != null and params.beginTime != ''">and production_date &gt;= #{params.beginTime}</if>
+            <if test="params.endTime != null and params.endTime != ''">and production_date &lt;= #{params.endTime}</if>
+        </where>
+        order by trace_id desc
+    </select>
+
+    <select id="selectTraceById" resultMap="TraceResult">
+        select * from mes_quality_trace where trace_id=#{traceId}
+    </select>
+
+    <select id="selectTraceByProductId" resultMap="TraceResult">
+        select * from mes_quality_trace where product_id=#{productId} order by create_time desc
+    </select>
+
+    <select id="selectTraceByWorkOrderId" resultMap="TraceResult">
+        select * from mes_quality_trace where work_order_id=#{workOrderId} order by create_time desc
+    </select>
+
+    <select id="selectTraceByBatchNo" resultMap="TraceResult">
+        select * from mes_quality_trace where batch_no=#{batchNo} order by create_time desc
+    </select>
+
+    <insert id="insertQualityTrace" useGeneratedKeys="true" keyProperty="traceId">
+        insert into mes_quality_trace(trace_type,trace_key,product_id,product_code,plan_id,plan_no,order_id,order_no,work_order_id,work_order_no,batch_no,raw_batch_no,production_date,inspector,inspect_result,trace_data,create_time,remark)
+        values(#{traceType},#{traceKey},#{productId},#{productCode},#{planId},#{planNo},#{orderId},#{orderNo},#{workOrderId},#{workOrderNo},#{batchNo},#{rawBatchNo},#{productionDate},#{inspector},#{inspectResult},#{traceData},sysdate(),#{remark})
+    </insert>
+
+    <!-- BatchInfo -->
+    <select id="selectBatchList" resultMap="BatchResult">
+        select * from mes_batch_info
+        <where>
+            <if test="batchNo != null and batchNo != ''">and batch_no like concat('%',#{batchNo},'%')</if>
+            <if test="materialType != null and materialType != ''">and material_type = #{materialType}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by batch_id desc
+    </select>
+
+    <select id="selectBatchByNo" resultMap="BatchResult">
+        select * from mes_batch_info where batch_no=#{batchNo}
+    </select>
+
+    <insert id="insertBatchInfo" useGeneratedKeys="true" keyProperty="batchId">
+        insert into mes_batch_info(batch_no,material_code,material_name,material_type,supplier_id,supplier_name,quantity,unit,produce_date,receive_date,status,create_by,create_time,remark)
+        values(#{batchNo},#{materialCode},#{materialName},#{materialType},#{supplierId},#{supplierName},#{quantity},#{unit},#{produceDate},#{receiveDate},#{status},#{createBy},sysdate(),#{remark})
+    </insert>
+
+    <!-- DefectRecord -->
+    <select id="selectDefectList" resultMap="DefectResult">
+        select * from mes_defect_record
+        <where>
+            <if test="defectCode != null and defectCode != ''">and defect_code like concat('%',#{defectCode},'%')</if>
+            <if test="defectType != null and defectType != ''">and defect_type = #{defectType}</if>
+            <if test="workOrderId != null">and work_order_id = #{workOrderId}</if>
+        </where>
+        order by defect_id desc
+    </select>
+
+    <select id="selectDefectsByWorkOrderId" resultMap="DefectResult">
+        select * from mes_defect_record where work_order_id=#{workOrderId}
+    </select>
+
+    <insert id="insertDefectRecord" useGeneratedKeys="true" keyProperty="defectId">
+        insert into mes_defect_record(defect_code,defect_type,defect_desc,work_order_id,process_task_id,batch_no,defect_qty,severity,handler,handle_result,discover_time,handle_time,create_by,create_time,remark)
+        values(#{defectCode},#{defectType},#{defectDesc},#{workOrderId},#{processTaskId},#{batchNo},#{defectQty},#{severity},#{handler},#{handleResult},#{discoverTime},#{handleTime},#{createBy},sysdate(),#{remark})
+    </insert>
+
+    <update id="updateDefectRecord">
+        update mes_defect_record <set>
+            <if test="handler!=null">handler=#{handler},</if>
+            <if test="handleResult!=null">handle_result=#{handleResult},</if>
+            <if test="handleTime!=null">handle_time=#{handleTime},</if>
+        </set> where defect_id=#{defectId}
+    </update>
+
+    <!-- ============ 跨表查询追溯记录（真实数据链路：SO→WO→工序→质检） ============ -->
+    <select id="searchTraces" resultMap="TraceVOResult">
+        SELECT
+            t.trace_id, t.trace_type,
+            so.order_id, so.order_no,
+            p.product_name, p.product_code,
+            pp.plan_id, pp.plan_no,
+            wo.work_order_id, wo.work_order_no,
+            pt.process_name,
+            COALESCE(e.equipment_name, pem.equipment_name) AS equipment_name,
+            COALESCE(u.user_name, qr.inspector) AS operator_name,
+            COALESCE(pt.good_qty, 0) + COALESCE(pt.bad_qty, 0) AS report_qty,
+            COALESCE(pt.good_qty, 0) AS good_qty,
+            COALESCE(pt.bad_qty, 0) AS bad_qty,
+            qr.result AS inspect_result,
+            COALESCE(qr.check_time, pt.start_time, pt.create_time) AS production_date,
+            sr.shipment_no, so.delivery_status,
+            pt.create_time
+        FROM mes_process_task pt
+        INNER JOIN work_order wo ON wo.work_order_id = pt.work_order_id
+        INNER JOIN sales_order so ON so.order_id = wo.order_id
+        LEFT JOIN product p ON p.product_id = so.product_id
+        LEFT JOIN production_plan pp ON pp.plan_id = wo.plan_id
+        LEFT JOIN mes_quality_trace t ON t.work_order_id = pt.work_order_id
+            AND t.trace_id = (SELECT MAX(t2.trace_id) FROM mes_quality_trace t2 WHERE t2.work_order_id = pt.work_order_id)
+        LEFT JOIN equipment e ON e.equipment_id = pt.equipment_id
+        LEFT JOIN mes_process_equipment_mapping pem ON pem.process_seq = pt.process_seq
+        LEFT JOIN sys_user u ON u.user_id = pt.operator_id
+        LEFT JOIN mes_quality_record qr ON qr.work_order_id = pt.work_order_id
+        LEFT JOIN shipment_record sr ON sr.order_id = so.order_id
+        <where>
+            <if test="orderNo != null and orderNo != ''">AND so.order_no LIKE CONCAT('%', #{orderNo}, '%')</if>
+            <if test="workOrderNo != null and workOrderNo != ''">AND wo.work_order_no LIKE CONCAT('%', #{workOrderNo}, '%')</if>
+            <if test="productName != null and productName != ''">AND p.product_name LIKE CONCAT('%', #{productName}, '%')</if>
+            <if test="params.beginTime != null and params.beginTime != ''">AND (qr.check_time &gt;= #{params.beginTime} OR pt.start_time &gt;= #{params.beginTime})</if>
+            <if test="params.endTime != null and params.endTime != ''">AND (qr.check_time &lt;= #{params.endTime} OR pt.start_time &lt;= #{params.endTime})</if>
+        </where>
+        ORDER BY wo.work_order_id DESC, pt.process_seq
+    </select>
+
+    <select id="selectDistinctOrders" resultType="java.util.Map">
+        SELECT DISTINCT so.order_id, so.order_no, p.product_name
+        FROM sales_order so
+        LEFT JOIN product p ON p.product_id = so.product_id
+        ORDER BY so.order_id DESC
+    </select>
+
+    <select id="selectDistinctProcessSeqs" resultType="java.util.Map">
+        SELECT DISTINCT process_seq, process_name
+        FROM mes_process_task
+        ORDER BY process_seq
+    </select>
+</mapper>

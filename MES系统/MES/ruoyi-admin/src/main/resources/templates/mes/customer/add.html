@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:include="include :: header('客户管理')" />
+</head>
+<body class="gray-bg">
+    <div class="container-div">
+        <div class="row">
+            <div class="col-sm-12">
+                <form id="edit-form" class="form-horizontal" style="padding:0;">
+                    <input type="hidden" name="customerId" id="customerId"/>
+                    <div class="form-card">
+                        <div class="form-card-header">基础信息</div>
+                        <div class="form-card-body">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">客户编码：</label>
+                        <div class="col-sm-4"><input type="text" name="customerCode" class="form-control" required/></div>
+                        <label class="col-sm-2 control-label">客户名称：</label>
+                        <div class="col-sm-4"><input type="text" name="customerName" class="form-control" required/></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">联系人：</label>
+                        <div class="col-sm-4"><input type="text" name="contactName" class="form-control"/></div>
+                        <label class="col-sm-2 control-label">联系电话：</label>
+                        <div class="col-sm-4"><input type="text" name="contactPhone" class="form-control"/></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">邮箱：</label>
+                        <div class="col-sm-4"><input type="text" name="email" class="form-control"/></div>
+                        <label class="col-sm-2 control-label">客户优先级：</label>
+                        <div class="col-sm-4">
+                            <select name="customerPriority" class="form-control">
+                                <option value="1">A级</option>
+                                <option value="2">B级</option>
+                                <option value="3">C级</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">状态：</label>
+                        <div class="col-sm-4">
+                            <select name="status" class="form-control">
+                                <option value="0">正常</option>
+                                <option value="1">停用</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">地址：</label>
+                        <div class="col-sm-10"><input type="text" name="address" class="form-control"/></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">备注：</label>
+                        <div class="col-sm-10"><textarea name="remark" class="form-control" rows="3"></textarea></div>
+                    </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                    <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                    <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+                </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/customer";
+        var apiPrefix = ctx + "api/mes/customer";
+        var customerId = [[${customerId}]];
+
+        $(function() {
+            if (customerId) loadData();
+        });
+
+        function loadData() {
+            $.get(apiPrefix + "/" + customerId, function(res) {
+                if (res.code == 0) {
+                    var data = res.data;
+                    $.each(data, function(k, v) { $("#edit-form [name='" + k + "']").val(v); });
+                }
+            });
+        }
+
+        function submitHandler() {
+            var data = {};
+            $("#edit-form").serializeArray().forEach(function(item) { data[item.name] = item.value; });
+            if (!data.customerCode || $.trim(data.customerCode) == '') { $.modal.msgWarning("请输入客户编码"); return; }
+            if (!data.customerName || $.trim(data.customerName) == '') { $.modal.msgWarning("请输入客户名称"); return; }
+            if (customerId) { data.customerId = customerId; $.operate.save(apiPrefix + "/update", data); }
+            else { $.operate.save(apiPrefix + "/create", data); }
+        }
+        function resetForm() { $("#edit-form")[0].reset(); }
+    </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('工单管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <div class="callout callout-info" style="margin-top:30px;">
+            <h4><i class="fa fa-info-circle"></i> 提示</h4>
+            <p>工单必须通过<strong>生产计划</strong>生成，不允许手动创建喵~</p>
+            <p>请前往 <a th:href="@{/mes/plan/plan}" class="btn btn-primary btn-sm"><i class="fa fa-arrow-right"></i> 生产计划管理</a> 页面，在已排产的计划上点击<strong>"生成工单"</strong>按钮喵~</p>
+        </div>
+        <form id="edit-form" class="form-horizontal" style="display:none;">
+            <input type="hidden" name="workOrderId" id="workOrderId"/>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/workorder"; var apiPrefix = ctx + "api/mes/workorder";
+        var workOrderId = [[${workOrderId}]];
+        $(function() {
+            if (!workOrderId) {
+                $.modal.alertWarning("工单必须通过生产计划页面生成，不支持手动创建喵~");
+            }
+        });
+        function submitHandler() {
+            $.modal.alertWarning("工单必须通过生产计划页面生成，不支持手动创建喵~");
+        }
+    </script>
+</body>
+</html>

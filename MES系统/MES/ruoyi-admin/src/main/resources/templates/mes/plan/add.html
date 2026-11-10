@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('生产计划')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <form id="edit-form" class="form-horizontal" style="padding:0;">
+            <input type="hidden" name="planId" id="planId"/>
+            <input type="hidden" id="deliveryDate" value=""/>
+            <div class="form-card">
+                <div class="form-card-header">基础信息</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">计划编号：</label>
+                <div class="col-sm-4"><input type="text" name="planNo" class="form-control" placeholder="自动生成"/></div>
+                <label class="col-sm-2 control-label">销售订单：</label>
+                <div class="col-sm-4"><select name="salesOrderId" id="salesOrderId" class="form-control"><option value="">请选择</option></select></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">产品：</label>
+                <div class="col-sm-4"><select name="productId" class="form-control"><option value="">请选择</option></select></div>
+                <label class="col-sm-2 control-label">订单数量：</label>
+                <div class="col-sm-4"><input type="number" name="orderQuantity" class="form-control" required/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">库存数量：</label>
+                <div class="col-sm-4"><input type="number" name="inventoryQuantity" class="form-control"/></div>
+                <label class="col-sm-2 control-label">安全库存：</label>
+                <div class="col-sm-4"><input type="number" name="safeStock" class="form-control"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">需求数量：</label>
+                <div class="col-sm-4"><input type="number" name="requiredQuantity" class="form-control" placeholder="自动计算"/></div>
+                <label class="col-sm-2 control-label">优先级：</label>
+                <div class="col-sm-4"><select name="priority" class="form-control">
+                    <option value="1">A级</option>
+                    <option value="2">B级</option>
+                    <option value="3" selected>C级</option>
+                </select></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">是否紧急：</label>
+                <div class="col-sm-4"><select name="isUrgent" class="form-control">
+                    <option value="0">普通</option>
+                    <option value="1">紧急插单</option>
+                </select></div>
+                <label class="col-sm-2 control-label">计划状态：</label>
+                <div class="col-sm-4"><select name="planStatus" class="form-control">
+                    <option value="已审核" selected>已审核</option>
+                    <option value="已排产">已排产</option>
+                    <option value="生产中">生产中</option>
+                    <option value="已完成">已完成</option>
+                    <option value="已取消">已取消</option>
+                </select></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">计划开始：</label>
+                <div class="col-sm-4">
+                    <input type="text" name="planStartTime" id="planStart" class="form-control time-input" data-type="datetime" data-format="yyyy-MM-dd HH:mm:ss" autocomplete="off" placeholder="请选择计划开始时间"/>
+                </div>
+                <label class="col-sm-2 control-label">计划结束：</label>
+                <div class="col-sm-4">
+                    <input type="text" name="planEndTime" id="planEnd" class="form-control time-input" data-type="datetime" data-format="yyyy-MM-dd HH:mm:ss" autocomplete="off" placeholder="请选择计划结束时间"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">备注：</label>
+                <div class="col-sm-10"><textarea name="remark" class="form-control" rows="3"></textarea></div>
+            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                    <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                    <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+                </div>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/plan"; var apiPrefix = ctx + "api/mes/plan";
+        var planId = [[${planId}]];
+        var deliveryDate; // 交货日期上限
+
+        $(function() {
+            // 加载销售订单下拉框（含交货日期）
+            $.post(ctx + "api/mes/order/list", {pageSize: 999}, function(res) {
+                if (res.code == 0) $(res.rows).each(function(i, p) {
+                    var dueDateAttr = p.dueDate ? ' data-due="' + p.dueDate + '"' : '';
+                    $("#salesOrderId").append('<option value="' + p.orderId + '"' + dueDateAttr + '>' + p.orderNo + '</option>');
+                });
+            });
+            $.post(ctx + "api/mes/product/list", {pageSize: 999}, function(res) {
+                if (res.code == 0) $(res.rows).each(function(i, p) { $("#edit-form [name='productId']").append('<option value="' + p.productId + '">' + p.productName + '</option>'); });
+            });
+
+            // 销售订单变更时更新交货日期
+            $("#salesOrderId").on("change", function() {
+                var sel = $(this).find("option:selected");
+                var due = sel.attr("data-due");
+                deliveryDate = due || null;
+                $("#deliveryDate").val(deliveryDate || "");
+            });
+
+            if (planId) loadData();
+        });
+
+        function loadData() {
+            $.get(apiPrefix + "/" + planId, function(res) {
+                if (res.code == 0) {
+                    $.each(res.data, function(k, v) {
+                        if (k === 'planStartTime' || k === 'planEndTime') {
+                            if (v) $("#edit-form [name='" + k + "']").val(v);
+                        } else {
+                            $("#edit-form [name='" + k + "']").val(v);
+                        }
+                    });
+                    // 编辑时触发销售订单change以获取deliveryDate
+                    if (res.data.salesOrderId) {
+                        $("#salesOrderId").val(res.data.salesOrderId).trigger("change");
+                    }
+                }
+            });
+        }
+
+        /** 校验计划时间 */
+        function validatePlanTime() {
+            var planStart = $("#planStart").val();
+            var planEnd = $("#planEnd").val();
+            if (!planStart) { $.modal.alertWarning("请选择计划开始时间"); return false; }
+            if (!planEnd) { $.modal.alertWarning("请选择计划结束时间"); return false; }
+            if (!deliveryDate) { $.modal.alertWarning("请先选择销售订单"); return false; }
+
+            // deliveryDate格式: yyyy-MM-dd HH:mm:ss，取日期部分比较
+            var due = deliveryDate.substring(0, 10);
+            var startDate = planStart.substring(0, 10);
+            var endDate = planEnd.substring(0, 10);
+
+            if (startDate > due) {
+                $.modal.alertWarning("计划开始时间不能晚于交货日期（" + due + "）");
+                return false;
+            }
+            if (endDate < startDate) {
+                $.modal.alertWarning("计划结束时间不能早于计划开始时间（" + planStart + "）");
+                return false;
+            }
+            if (endDate > due) {
+                $.modal.alertWarning("计划结束时间不能晚于交货日期（" + due + "）");
+                return false;
+            }
+            return true;
+        }
+
+        function submitHandler() {
+            if (!validatePlanTime()) return;
+            var data = {}; $("#edit-form").serializeArray().forEach(function(i) { data[i.name] = i.value; });
+            if (!data.salesOrderId || data.salesOrderId == '') { $.modal.msgWarning("请选择销售订单"); return; }
+            if (!data.productId || data.productId == '') { $.modal.msgWarning("请选择产品"); return; }
+            if (!data.orderQuantity || parseFloat(data.orderQuantity) <= 0) { $.modal.msgWarning("订单数量必须大于0"); return; }
+            if (planId) { data.planId = planId; $.operate.save(apiPrefix + "/update", data); }
+            else { $.operate.save(apiPrefix + "/create", data); }
+        }
+        function resetForm() { $("#edit-form")[0].reset(); }
+    </script>
+</body>
+</html>

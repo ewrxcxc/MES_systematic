@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('生产计划管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>计划编号：<input type="text" name="planNo"/></li>
+                <li>销售订单：<input type="text" name="orderNo"/></li>
+                <li>产品名称：<input type="text" name="productName"/></li>
+                <li>计划状态：<select name="planStatus">
+                    <option value="">全部</option>
+                    <option value="已审核">已审核</option>
+                    <option value="已排产">已排产</option>
+                    <option value="生产中">生产中</option>
+                    <option value="已完成">已完成</option>
+                    <option value="已取消">已取消</option>
+                </select></li>
+                <li>开始日期：<input type="date" name="planStartTimeBegin"/></li>
+                <li>结束日期：<input type="date" name="planEndTimeEnd"/></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success btn-rounded" onclick="$.operate.addTab()"><i class="fa fa-plus"></i> 新增计划</a>
+            <a class="btn btn-warning btn-rounded single disabled" onclick="generateWOFromToolbar()"><i class="fa fa-tasks"></i> 生成工单</a>
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()"><i class="fa fa-remove"></i> 删除</a>
+            <a class="btn btn-default btn-rounded" onclick="$.table.exportExcel()"><i class="fa fa-download"></i> 导出</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/plan"; var apiPrefix = ctx + "api/mes/plan";
+        $(function() {
+            $.table.init({
+                url: apiPrefix + "/list", createUrl: prefix + "/add", updateUrl: prefix + "/edit/{id}",
+                removeUrl: apiPrefix + "/delete", exportUrl: apiPrefix + "/export",
+                sortName: "createTime", sortOrder: "desc", striped: true, modalName: "生产计划", uniqueId: "planId",
+                showExport: false,
+                columns: [
+                    { checkbox: true },
+                    { field: 'planId', visible: false },
+                    { field: 'planNo', title: '计划编号', sortable: true },
+                    { field: 'orderNo', title: '销售订单号' },
+                    { field: 'customerName', title: '客户' },
+                    { field: 'productName', title: '产品' },
+                    { field: 'plannedQty', title: '计划数量', align: 'center' },
+                    { field: 'completedQty', title: '完成数量', align: 'center',
+                        formatter: function(v) { return '<span class="badge bg-green">'+(v||0)+'</span>'; }
+                    },
+                    { field: 'planStartTime', title: '计划开始', sortable: true },
+                    { field: 'planEndTime', title: '计划结束' },
+                    { field: 'planStatus', title: '状态', align: 'center',
+                        formatter: function(v) {
+                            var m = {'已审核':'primary','已排产':'warning','生产中':'warning','已完成':'success','已取消':'default'};
+                            return '<span class="label label-'+(m[v]||'default')+'">'+v+'</span>';
+                        }
+                    },
+                    { field: 'priority', title: '优先级', align: 'center',
+                        formatter: function(v) {
+                            var m = {1:'A级', 2:'B级', 3:'C级'};
+                            var c = {1:'danger', 2:'warning', 3:'info'};
+                            return '<span class="label label-'+(c[v]||'default')+'">'+(m[v]||v)+'</span>';
+                        }
+                    },
+                    { field: 'createTime', title: '创建时间', sortable: true },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r, i) {
+                            var btns = '<a class="btn btn-info btn-xs" onclick="showDetailById('+r.planId+')"><i class="fa fa-eye"></i> 详情</a> ';
+                            // 已审核：编辑、删除、生成工单
+                            if (r.planStatus == '已审核') {
+                                btns += '<a class="btn btn-primary btn-xs" onclick="$.operate.editTab(\''+r.planId+'\')"><i class="fa fa-edit"></i> 编辑</a> ';
+                                btns += '<a class="btn btn-warning btn-xs" onclick="generateWO('+r.planId+')"><i class="fa fa-tasks"></i> 生成工单</a> ';
+                                btns += '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\''+r.planId+'\')"><i class="fa fa-remove"></i> 删除</a>';
+                            }
+                            // 已排产：查看工单
+                            if (r.planStatus == '已排产') {
+                                btns += '<a class="btn btn-primary btn-xs" onclick="viewWorkOrders('+r.planId+')"><i class="fa fa-tasks"></i> 查看工单</a> ';
+                            }
+                            // 生产中：查看工单、报工
+                            if (r.planStatus == '生产中') {
+                                btns += '<a class="btn btn-primary btn-xs" onclick="viewWorkOrders('+r.planId+')"><i class="fa fa-tasks"></i> 查看工单</a> ';
+                                btns += '<a class="btn btn-success btn-xs" onclick="doReport('+r.planId+')"><i class="fa fa-check"></i> 报工</a> ';
+                            }
+                            return btns;
+                        }
+                    }
+                ]
+            });
+        });
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+
+        function generateWOFromToolbar() {
+            var rows = $("#bootstrap-table").bootstrapTable('getSelections');
+            if (rows.length != 1) { $.modal.alertWarning("请选择一条已审核的计划"); return; }
+            if (rows[0].planStatus != '已审核') { $.modal.alertWarning("仅已审核状态的计划可以生成工单"); return; }
+            generateWO(rows[0].planId);
+        }
+        function generateWO(planId) {
+            $.modal.confirm("确认从该计划生成工单？", function() {
+                $.operate.post(apiPrefix + "/generateWorkOrder/" + planId, {}, function() { $.table.search(); });
+            });
+        }
+
+        function showDetailById(planId) {
+            $.modal.openTab("计划详情", prefix + "/detail/" + planId);
+        }
+
+        function viewWorkOrders(planId) {
+            $.modal.openTab("工单中心", ctx + "mes/workorder");
+        }
+
+        function doReport(planId) {
+            $.modal.openTab("生产报工", ctx + "mes/report");
+        }
+    </script>
+</body>
+</html>

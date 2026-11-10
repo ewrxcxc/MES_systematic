@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.BomMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.Bom" id="BomResult">
+        <id     property="bomId"         column="bom_id"         />
+        <result property="productId"     column="product_id"     />
+        <result property="materialName"  column="material_name"  />
+        <result property="materialCode"  column="material_code"  />
+        <result property="usageQty"      column="usage_qty"      />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"      column="update_by"      />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"        column="remark"         />
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.vo.BomVO" id="BomVOResult">
+        <id     property="bomId"         column="bom_id"         />
+        <result property="productId"     column="product_id"     />
+        <result property="productName"   column="product_name"   />
+        <result property="materialName"  column="material_name"  />
+        <result property="materialCode"  column="material_code"  />
+        <result property="usageQty"      column="usage_qty"      />
+        <result property="remark"        column="remark"         />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectBomVo">
+        select b.bom_id, b.product_id, p.product_name, b.material_name, b.material_code,
+               b.usage_qty, b.remark, b.create_time, b.update_time
+        from bom b
+        left join product p on p.product_id = b.product_id
+    </sql>
+
+    <select id="selectBomList" parameterType="com.ruoyi.mes.dto.BomQueryDTO" resultMap="BomVOResult">
+        <include refid="selectBomVo"/>
+        <where>
+            <if test="productId != null">
+                and b.product_id = #{productId}
+            </if>
+            <if test="materialName != null and materialName != ''">
+                and b.material_name like concat('%', #{materialName}, '%')
+            </if>
+            <if test="materialCode != null and materialCode != ''">
+                and b.material_code like concat('%', #{materialCode}, '%')
+            </if>
+        </where>
+        order by b.bom_id desc
+    </select>
+
+    <select id="selectBomById" parameterType="Long" resultMap="BomVOResult">
+        <include refid="selectBomVo"/>
+        where b.bom_id = #{bomId}
+    </select>
+
+    <select id="selectBomEntityById" parameterType="Long" resultMap="BomResult">
+        select bom_id, product_id, material_name, material_code, usage_qty,
+               create_by, create_time, update_by, update_time, remark
+        from bom
+        where bom_id = #{bomId}
+    </select>
+
+    <select id="selectBomByProductId" parameterType="Long" resultMap="BomVOResult">
+        <include refid="selectBomVo"/>
+        where b.product_id = #{productId}
+    </select>
+
+    <insert id="insertBom" parameterType="com.ruoyi.mes.domain.Bom" useGeneratedKeys="true" keyProperty="bomId">
+        insert into bom(
+            <if test="productId != null">product_id,</if>
+            <if test="materialName != null and materialName != ''">material_name,</if>
+            <if test="materialCode != null and materialCode != ''">material_code,</if>
+            <if test="usageQty != null">usage_qty,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="productId != null">#{productId},</if>
+            <if test="materialName != null and materialName != ''">#{materialName},</if>
+            <if test="materialCode != null and materialCode != ''">#{materialCode},</if>
+            <if test="usageQty != null">#{usageQty},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateBom" parameterType="com.ruoyi.mes.domain.Bom">
+        update bom
+        <set>
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="materialName != null and materialName != ''">material_name = #{materialName},</if>
+            <if test="materialCode != null">material_code = #{materialCode},</if>
+            <if test="usageQty != null">usage_qty = #{usageQty},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where bom_id = #{bomId}
+    </update>
+
+    <delete id="deleteBomByIds">
+        delete from bom where bom_id in
+        <foreach collection="ids" item="bomId" open="(" separator="," close=")">
+            #{bomId}
+        </foreach>
+    </delete>
+
+</mapper>

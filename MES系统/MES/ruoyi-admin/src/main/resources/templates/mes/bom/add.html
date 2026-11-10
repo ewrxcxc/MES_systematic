@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('BOM管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <form id="edit-form" class="form-horizontal" style="padding:0;">
+            <input type="hidden" name="bomId" id="bomId"/>
+            <div class="form-card">
+                <div class="form-card-header">基础信息</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">产品：</label>
+                <div class="col-sm-4"><select name="productId" id="productId" class="form-control" required></select></div>
+                <label class="col-sm-2 control-label">产品编码：</label>
+                <div class="col-sm-4"><input type="text" name="productCode" id="productCode" class="form-control" readonly style="background:#f5f5f5;"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">物料编码：</label>
+                <div class="col-sm-4"><select name="materialCode" id="materialCode" class="form-control" required><option value="">请选择物料</option></select></div>
+                <label class="col-sm-2 control-label">物料名称：</label>
+                <div class="col-sm-4"><input type="text" name="materialName" id="materialName" class="form-control" readonly style="background:#f5f5f5;"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">用量：</label>
+                <div class="col-sm-4"><input type="text" name="usageQty" class="form-control" required/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">备注：</label>
+                <div class="col-sm-10"><textarea name="remark" class="form-control" rows="3"></textarea></div>
+            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                    <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                    <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+                </div>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/bom"; var apiPrefix = ctx + "api/mes/bom";
+        var bomId = [[${bomId}]];
+        var productMap = {}; // productId -> productCode
+
+        $(function() {
+            // 加载产品下拉
+            $.post(ctx + "api/mes/product/list", {pageSize: 999}, function(res) {
+                if (res.code == 0) $(res.rows).each(function(i, p) {
+                    productMap[p.productId] = p.productCode || '';
+                    $("#productId").append('<option value="' + p.productId + '">' + p.productName + '</option>');
+                });
+                if (bomId) loadData();
+            });
+            // 加载物料下拉（从库存获取唯一物料编码和名称）
+            $.post(ctx + "api/mes/inventory/list", {pageSize: 999}, function(res) {
+                if (res.code == 0) {
+                    var seen = {};
+                    $(res.rows).each(function(i, item) {
+                        var code = item.materialCode;
+                        if (code && !seen[code]) {
+                            seen[code] = true;
+                            $("#materialCode").append('<option value="' + code + '" data-name="' + (item.materialName||'') + '">' + code + ' - ' + (item.materialName||'') + '</option>');
+                        }
+                    });
+                }
+            });
+            // 选择产品后自动填入产品编码
+            $("#productId").change(function() {
+                var pid = $(this).val();
+                $("#productCode").val(productMap[pid] || '');
+            });
+            // 选择物料编码后自动填入物料名称
+            $("#materialCode").change(function() {
+                var opt = $(this).find("option:selected");
+                $("#materialName").val(opt.data("name") || '');
+            });
+        });
+
+        function loadData() {
+            $.get(apiPrefix + "/" + bomId, function(res) {
+                if (res.code == 0) {
+                    $.each(res.data, function(k, v) { $("#edit-form [name='" + k + "']").val(v); });
+                    // 回显产品编码
+                    var pid = res.data.productId;
+                    if (pid && productMap[pid]) $("#productCode").val(productMap[pid]);
+                }
+            });
+        }
+
+        function submitHandler() {
+            var data = {}; $("#edit-form").serializeArray().forEach(function(i) { data[i.name] = i.value; });
+            if (!data.productId || data.productId == '') { $.modal.msgWarning("请选择产品"); return; }
+            if (!data.materialCode || $.trim(data.materialCode) == '') { $.modal.msgWarning("请选择物料编码"); return; }
+            if (!data.materialName || $.trim(data.materialName) == '') { $.modal.msgWarning("请选择物料"); return; }
+            if (!data.usageQty || parseFloat(data.usageQty) <= 0) { $.modal.msgWarning("用量必须大于0"); return; }
+            if (bomId) { data.bomId = bomId; $.operate.save(apiPrefix + "/update", data); }
+            else { $.operate.save(apiPrefix + "/create", data); }
+        }
+        function resetForm() {
+            $("#edit-form")[0].reset();
+            if (bomId) { $("#bomId").val(bomId); }
+        }
+    </script>
+</body>
+</html>

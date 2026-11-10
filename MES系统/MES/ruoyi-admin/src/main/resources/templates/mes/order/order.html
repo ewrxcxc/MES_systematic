@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('销售订单')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>订单编号：<input type="text" name="orderNo"/></li>
+                <li>客户名称：<input type="text" name="customerName"/></li>
+                <li>订单状态：<select name="orderStatus">
+                    <option value="">所有</option>
+                    <option value="PENDING">待确认</option>
+                    <option value="CONFIRMED">已确认</option>
+                    <option value="PRODUCING">生产中</option>
+                    <option value="COMPLETED">已完成</option>
+                    <option value="CANCELLED">已取消</option>
+                </select></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success btn-rounded" onclick="$.operate.addTab()"><i class="fa fa-plus"></i> 新增</a>
+            <a class="btn btn-primary btn-rounded single disabled" onclick="$.operate.editTab()"><i class="fa fa-edit"></i> 修改</a>
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()"><i class="fa fa-remove"></i> 删除</a>
+            <a class="btn btn-default btn-rounded" onclick="$.table.exportExcel()"><i class="fa fa-download"></i> 导出</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/order"; var apiPrefix = ctx + "api/mes/order";
+        $(function() { queryList(); });
+        function queryList() {
+            $.table.init({
+                url: apiPrefix + "/list", createUrl: prefix + "/add", updateUrl: prefix + "/edit/{id}",
+                removeUrl: apiPrefix + "/delete", exportUrl: apiPrefix + "/export",
+                sortName: "createTime", sortOrder: "desc", striped: true, modalName: "销售订单",
+                columns: [
+                    { checkbox: true },
+                    { field: 'orderId', title: 'ID', visible: false },
+                    { field: 'orderNo', title: '订单编号', sortable: true },
+                    { field: 'customerName', title: '客户' },
+                    { field: 'productName', title: '产品' },
+                    { field: 'quantity', title: '数量' },
+                    { field: 'dueDate', title: '交货日期', sortable: true },
+                    { field: 'orderStatus', title: '订单状态', align: 'center',
+                        formatter: function(v) {
+                            var m = { 'PENDING':'warning','CONFIRMED':'primary','PRODUCING':'warning','COMPLETED':'success','CANCELLED':'danger' };
+                            var t = { 'PENDING':'待确认','CONFIRMED':'已确认','PRODUCING':'生产中','COMPLETED':'已完成','CANCELLED':'已取消' };
+                            return '<span class="label label-' + (m[v] || 'default') + '">' + (t[v] || v) + '</span>';
+                        }
+                    },
+                    { field: 'deliveryStatus', title: '发货状态' },
+                    { field: 'isUrgent', title: '紧急', align: 'center',
+                        formatter: function(v) {
+                            return v == 1 ? '<span class="label label-danger">紧急</span>' : '<span class="label label-default">普通</span>';
+                        }
+                    },
+                    { field: 'createTime', title: '创建时间', sortable: true },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            var btns = '<a class="btn btn-primary btn-xs" onclick="$.operate.editTab(\'' + r.orderId + '\')"><i class="fa fa-edit"></i>编辑</a> '
+                                + '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + r.orderId + '\')"><i class="fa fa-remove"></i>删除</a>';
+                            if (r.orderStatus == 'CONFIRMED' && r.deliveryStatus == '未发货') {
+                                btns += ' <a class="btn btn-warning btn-xs" onclick="openShipModal(\'' + r.orderId + '\')"><i class="fa fa-truck"></i>发货</a>';
+                            }
+                            return btns;
+                        }
+                    }
+                ]
+            });
+        }
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+
+        function openShipModal(orderId) {
+            $.get(apiPrefix + "/shipData/" + orderId, function(res) {
+                if (res.code != 0) { $.modal.alertError(res.msg); return; }
+                var o = res.data;
+                $("#shipOrderId").val(o.orderId);
+                $("#shipOrderNo").val(o.orderNo);
+                $("#shipCustomerName").val(o.customerName);
+                $("#shipProductName").val(o.productName);
+                $("#shipOrderQty").val(o.quantity);
+                $("#shipQty").val(o.quantity);
+                var now = new Date();
+                var shipmentNo = "FH" + now.getFullYear()
+                    + String(now.getMonth()+1).padStart(2,'0')
+                    + String(now.getDate()).padStart(2,'0')
+                    + String(now.getHours()).padStart(2,'0')
+                    + String(now.getMinutes()).padStart(2,'0')
+                    + String(now.getSeconds()).padStart(2,'0');
+                $("#shipShipmentNo").val(shipmentNo);
+                $("#shipTime").val($.common.dateFormat(now, "yyyy-MM-dd HH:mm:ss"));
+                $("#shipExpressCompany").val("");
+                $("#shipRemark").val("");
+                $("#shipModal").modal("show");
+            });
+        }
+
+        function submitShip() {
+            var orderId = $("#shipOrderId").val();
+            var expressCompany = $("#shipExpressCompany").val();
+            var shipmentQty = $("#shipQty").val();
+            var shipmentTime = $("#shipTime").val();
+            var remark = $("#shipRemark").val();
+            if (!expressCompany) { $.modal.alertError("请选择物流公司"); return; }
+            if (!shipmentQty || shipmentQty <= 0) { $.modal.alertError("发货数量必须大于0"); return; }
+            $.modal.loading("正在发货...");
+            $.post(apiPrefix + "/ship", {
+                orderId: orderId,
+                expressCompany: expressCompany,
+                shipmentQty: shipmentQty,
+                shipmentTime: shipmentTime,
+                remark: remark
+            }, function(res) {
+                $.modal.closeLoading();
+                if (res.code == 0) {
+                    $.modal.alertSuccess("发货成功", function() {
+                        $("#shipModal").modal("hide");
+                        $.table.search();
+                    });
+                } else {
+                    $.modal.alertError(res.msg);
+                }
+            });
+        }
+    </script>
+
+    <div class="modal fade" id="shipModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title"><i class="fa fa-truck"></i> 订单发货</h4>
+                </div>
+                <div class="modal-body">
+                    <form class="form-horizontal" id="shipForm">
+                        <input type="hidden" id="shipOrderId"/>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">销售订单号：</label>
+                            <div class="col-sm-8"><input class="form-control" id="shipOrderNo" readonly/></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">客户名称：</label>
+                            <div class="col-sm-8"><input class="form-control" id="shipCustomerName" readonly/></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">产品名称：</label>
+                            <div class="col-sm-8"><input class="form-control" id="shipProductName" readonly/></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">订单数量：</label>
+                            <div class="col-sm-8"><input class="form-control" id="shipOrderQty" readonly/></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">发货单号：</label>
+                            <div class="col-sm-8"><input class="form-control" id="shipShipmentNo" readonly/></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><span style="color:red">*</span> 发货数量：</label>
+                            <div class="col-sm-8"><input class="form-control" type="number" id="shipQty" min="1"/></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><span style="color:red">*</span> 物流公司：</label>
+                            <div class="col-sm-8">
+                                <select class="form-control" id="shipExpressCompany">
+                                    <option value="">-- 请选择 --</option>
+                                    <option value="顺丰速运">顺丰速运</option>
+                                    <option value="中通快递">中通快递</option>
+                                    <option value="圆通速递">圆通速递</option>
+                                    <option value="申通快递">申通快递</option>
+                                    <option value="韵达快递">韵达快递</option>
+                                    <option value="极兔速递">极兔速递</option>
+                                    <option value="京东物流">京东物流</option>
+                                    <option value="德邦快递">德邦快递</option>
+                                    <option value="EMS">EMS</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">发货日期：</label>
+                            <div class="col-sm-8"><input class="form-control" type="text" id="shipTime" placeholder="yyyy-MM-dd HH:mm:ss"/></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">备注：</label>
+                            <div class="col-sm-8"><textarea class="form-control" id="shipRemark" rows="2"></textarea></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-warning" onclick="submitShip()"><i class="fa fa-truck"></i> 确认发货</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

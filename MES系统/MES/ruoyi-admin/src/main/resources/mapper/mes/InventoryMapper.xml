@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.InventoryMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.Inventory" id="InvResult">
+        <id property="inventoryId" column="inventory_id"/><result property="inventoryType" column="inventory_type"/>
+        <result property="materialCode" column="material_code"/><result property="materialName" column="material_name"/>
+        <result property="quantity" column="quantity"/><result property="location" column="location"/>
+        <result property="createBy" column="create_by"/><result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/><result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.vo.InventoryVO" id="InvVOResult">
+        <id property="inventoryId" column="inventory_id"/><result property="inventoryType" column="inventory_type"/>
+        <result property="materialCode" column="material_code"/><result property="materialName" column="material_name"/>
+        <result property="quantity" column="quantity"/><result property="location" column="location"/>
+        <result property="remark" column="remark"/><result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectVo">select inventory_id, inventory_type, material_code, material_name, quantity, location, remark, create_time, update_time from inventory</sql>
+
+    <select id="selectInventoryList" resultMap="InvVOResult">
+        <include refid="selectVo"/>
+        <where>
+            <if test="inventoryType != null and inventoryType != ''">and inventory_type = #{inventoryType}</if>
+            <if test="materialCode != null and materialCode != ''">and material_code like concat('%',#{materialCode},'%')</if>
+            <if test="materialName != null and materialName != ''">and material_name like concat('%',#{materialName},'%')</if>
+        </where>
+        order by inventory_id desc
+    </select>
+
+    <select id="selectInventoryById" resultMap="InvVOResult"><include refid="selectVo"/> where inventory_id=#{inventoryId}</select>
+    <select id="selectInventoryEntityById" resultMap="InvResult">select * from inventory where inventory_id=#{inventoryId}</select>
+
+    <insert id="insertInventory" useGeneratedKeys="true" keyProperty="inventoryId">
+        insert into inventory(<if test="inventoryType!=null and inventoryType!=''">inventory_type,</if><if test="materialCode!=null and materialCode!=''">material_code,</if><if test="materialName!=null and materialName!=''">material_name,</if><if test="quantity!=null">quantity,</if><if test="location!=null and location!=''">location,</if><if test="remark!=null and remark!=''">remark,</if><if test="createBy!=null and createBy!=''">create_by,</if>create_time) values (<if test="inventoryType!=null and inventoryType!=''">#{inventoryType},</if><if test="materialCode!=null and materialCode!=''">#{materialCode},</if><if test="materialName!=null and materialName!=''">#{materialName},</if><if test="quantity!=null">#{quantity},</if><if test="location!=null and location!=''">#{location},</if><if test="remark!=null and remark!=''">#{remark},</if><if test="createBy!=null and createBy!=''">#{createBy},</if>sysdate())
+    </insert>
+
+    <update id="updateInventory">
+        update inventory <set><if test="inventoryType!=null">inventory_type=#{inventoryType},</if><if test="materialCode!=null">material_code=#{materialCode},</if><if test="materialName!=null">material_name=#{materialName},</if><if test="quantity!=null">quantity=#{quantity},</if><if test="location!=null">location=#{location},</if><if test="remark!=null">remark=#{remark},</if><if test="updateBy!=null and updateBy!=''">update_by=#{updateBy},</if>update_time=sysdate()</set> where inventory_id=#{inventoryId}
+    </update>
+
+    <update id="updateInventoryQuantity">
+        update inventory set quantity = #{quantity}, update_time = sysdate() where inventory_id = #{inventoryId}
+    </update>
+
+    <delete id="deleteInventoryByIds">delete from inventory where inventory_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach></delete>
+</mapper>

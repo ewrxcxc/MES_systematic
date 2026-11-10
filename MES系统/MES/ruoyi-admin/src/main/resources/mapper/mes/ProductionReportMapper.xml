@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.ProductionReportMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.ProductionReport" id="ReportResult">
+        <id property="reportId" column="report_id"/><result property="workOrderId" column="work_order_id"/>
+        <result property="operatorId" column="operator_id"/><result property="equipmentId" column="equipment_id"/>
+        <result property="goodQty" column="good_qty"/><result property="badQty" column="bad_qty"/>
+        <result property="reportType" column="report_type"/><result property="reportTime" column="report_time"/>
+        <result property="processSeq" column="process_seq"/><result property="processName" column="process_name"/>
+        <result property="status" column="status"/><result property="inspector" column="inspector"/>
+        <result property="qualityResult" column="quality_result"/><result property="qualityTime" column="quality_time"/>
+        <result property="createBy" column="create_by"/><result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/><result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.mes.vo.ProductionReportVO" id="ReportVOResult">
+        <id property="reportId" column="report_id"/><result property="workOrderId" column="work_order_id"/>
+        <result property="workOrderNo" column="work_order_no"/><result property="productName" column="product_name"/>
+        <result property="processSeq" column="process_seq"/><result property="processName" column="process_name"/>
+        <result property="operatorId" column="operator_id"/><result property="operatorName" column="operator_name"/>
+        <result property="equipmentId" column="equipment_id"/><result property="equipmentName" column="equipment_name"/>
+        <result property="goodQty" column="good_qty"/><result property="badQty" column="bad_qty"/>
+        <result property="reportType" column="report_type"/><result property="reportTime" column="report_time"/>
+        <result property="status" column="status"/><result property="inspector" column="inspector"/>
+        <result property="qualityResult" column="quality_result"/><result property="qualityTime" column="quality_time"/>
+        <result property="remark" column="remark"/><result property="createTime" column="create_time"/><result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectVo">
+        select r.report_id, r.work_order_id, w.work_order_no, prd.product_name,
+               r.process_seq, r.process_name,
+               r.operator_id, u.user_name as operator_name,
+               r.equipment_id, e.equipment_name,
+               r.good_qty, r.bad_qty, r.report_type, r.report_time,
+               r.status, r.inspector, r.quality_result, r.quality_time,
+               r.remark, r.create_time, r.update_time
+        from production_report r
+        left join work_order w on w.work_order_id = r.work_order_id
+        left join sales_order o on o.order_id = w.order_id
+        left join product prd on prd.product_id = o.product_id
+        left join sys_user u on u.user_id = r.operator_id
+        left join equipment e on e.equipment_id = r.equipment_id
+    </sql>
+
+    <select id="selectReportList" resultMap="ReportVOResult">
+        <include refid="selectVo"/>
+        <where>
+            <if test="workOrderId != null">and r.work_order_id = #{workOrderId}</if>
+            <if test="workOrderNo != null and workOrderNo != ''">and w.work_order_no like concat('%', #{workOrderNo}, '%')</if>
+            <if test="operatorId != null">and r.operator_id = #{operatorId}</if>
+            <if test="reportType != null and reportType != ''">and r.report_type = #{reportType}</if>
+            <if test="status != null and status != ''">and r.status = #{status}</if>
+            <if test="processName != null and processName != ''">and r.process_name like concat('%', #{processName}, '%')</if>
+            <if test="productName != null and productName != ''">and prd.product_name like concat('%', #{productName}, '%')</if>
+        </where>
+        order by r.report_id desc
+    </select>
+
+    <select id="selectReportById" resultMap="ReportVOResult"><include refid="selectVo"/> where r.report_id = #{reportId}</select>
+    <select id="selectReportEntityById" resultMap="ReportResult">select * from production_report where report_id = #{reportId}</select>
+
+    <insert id="insertReport" useGeneratedKeys="true" keyProperty="reportId">
+        insert into production_report(
+            <if test="workOrderId != null">work_order_id,</if>
+            <if test="processSeq != null">process_seq,</if>
+            <if test="processName != null and processName != ''">process_name,</if>
+            <if test="operatorId != null">operator_id,</if>
+            <if test="equipmentId != null">equipment_id,</if>
+            <if test="goodQty != null">good_qty,</if>
+            <if test="badQty != null">bad_qty,</if>
+            <if test="reportType != null and reportType != ''">report_type,</if>
+            <if test="reportTime != null">report_time,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="workOrderId != null">#{workOrderId},</if>
+            <if test="processSeq != null">#{processSeq},</if>
+            <if test="processName != null and processName != ''">#{processName},</if>
+            <if test="operatorId != null">#{operatorId},</if>
+            <if test="equipmentId != null">#{equipmentId},</if>
+            <if test="goodQty != null">#{goodQty},</if>
+            <if test="badQty != null">#{badQty},</if>
+            <if test="reportType != null and reportType != ''">#{reportType},</if>
+            <if test="reportTime != null">#{reportTime},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateReport">
+        update production_report
+        <set>
+            <if test="workOrderId != null">work_order_id=#{workOrderId},</if>
+            <if test="processSeq != null">process_seq=#{processSeq},</if>
+            <if test="processName != null">process_name=#{processName},</if>
+            <if test="operatorId != null">operator_id=#{operatorId},</if>
+            <if test="equipmentId != null">equipment_id=#{equipmentId},</if>
+            <if test="goodQty != null">good_qty=#{goodQty},</if>
+            <if test="badQty != null">bad_qty=#{badQty},</if>
+            <if test="reportType != null">report_type=#{reportType},</if>
+            <if test="reportTime != null">report_time=#{reportTime},</if>
+            <if test="status != null">status=#{status},</if>
+            <if test="inspector != null">inspector=#{inspector},</if>
+            <if test="qualityResult != null">quality_result=#{qualityResult},</if>
+            <if test="qualityTime != null">quality_time=#{qualityTime},</if>
+            <if test="remark != null">remark=#{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by=#{updateBy},</if>
+            update_time=sysdate()
+        </set>
+        where report_id=#{reportId}
+    </update>
+
+    <delete id="deleteReportByIds">delete from production_report where report_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach></delete>
+
+    <select id="selectReportsByWorkOrderId" resultMap="ReportResult">
+        select * from production_report where work_order_id = #{workOrderId} order by report_time desc
+    </select>
+</mapper>

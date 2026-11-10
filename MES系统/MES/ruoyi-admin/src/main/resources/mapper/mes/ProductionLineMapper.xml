@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.ProductionLineMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.ProductionLine" id="LineResult">
+        <id property="lineId" column="line_id"/>
+        <result property="lineCode" column="line_code"/>
+        <result property="lineName" column="line_name"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <select id="selectProductionLineList" resultMap="LineResult">
+        select * from mes_production_line
+        <where>
+            <if test="lineCode != null and lineCode != ''">and line_code like concat('%',#{lineCode},'%')</if>
+            <if test="lineName != null and lineName != ''">and line_name like concat('%',#{lineName},'%')</if>
+        </where>
+        order by line_id
+    </select>
+
+    <select id="selectProductionLineById" resultMap="LineResult">
+        select * from mes_production_line where line_id=#{lineId}
+    </select>
+
+    <insert id="insertProductionLine" useGeneratedKeys="true" keyProperty="lineId">
+        insert into mes_production_line(
+            <if test="lineCode!=null and lineCode!=''">line_code,</if>
+            <if test="lineName!=null and lineName!=''">line_name,</if>
+            <if test="description!=null and description!=''">description,</if>
+            <if test="status!=null and status!=''">status,</if>
+            <if test="remark!=null and remark!=''">remark,</if>
+            <if test="createBy!=null and createBy!=''">create_by,</if>
+            create_time
+        ) values (
+            <if test="lineCode!=null and lineCode!=''">#{lineCode},</if>
+            <if test="lineName!=null and lineName!=''">#{lineName},</if>
+            <if test="description!=null and description!=''">#{description},</if>
+            <if test="status!=null and status!=''">#{status},</if>
+            <if test="remark!=null and remark!=''">#{remark},</if>
+            <if test="createBy!=null and createBy!=''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateProductionLine">
+        update mes_production_line <set>
+            <if test="lineCode!=null">line_code=#{lineCode},</if>
+            <if test="lineName!=null">line_name=#{lineName},</if>
+            <if test="description!=null">description=#{description},</if>
+            <if test="status!=null">status=#{status},</if>
+            <if test="remark!=null">remark=#{remark},</if>
+            <if test="updateBy!=null and updateBy!=''">update_by=#{updateBy},</if>
+            update_time=sysdate()
+        </set> where line_id=#{lineId}
+    </update>
+
+    <delete id="deleteProductionLineByIds">
+        delete from mes_production_line where line_id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+</mapper>

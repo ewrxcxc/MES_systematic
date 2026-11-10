@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('BOM管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>物料编码：<input type="text" name="materialCode"/></li>
+                <li>物料名称：<input type="text" name="materialName"/></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success btn-rounded" onclick="$.operate.addTab()"><i class="fa fa-plus"></i> 新增</a>
+            <a class="btn btn-primary btn-rounded single disabled" onclick="$.operate.editTab()"><i class="fa fa-edit"></i> 修改</a>
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()"><i class="fa fa-remove"></i> 删除</a>
+            <a class="btn btn-default btn-rounded" onclick="$.table.exportExcel()"><i class="fa fa-download"></i> 导出</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/bom"; var apiPrefix = ctx + "api/mes/bom";
+        $(function() { queryList(); });
+        function queryList() {
+            $.table.init({
+                url: apiPrefix + "/list", createUrl: prefix + "/add", updateUrl: prefix + "/edit/{id}",
+                removeUrl: apiPrefix + "/delete", exportUrl: apiPrefix + "/export",
+                sortName: "createTime", sortOrder: "desc", striped: true, modalName: "BOM",
+                columns: [
+                    { checkbox: true },
+                    { field: 'bomId', title: 'ID', visible: false },
+                    { field: 'productName', title: '产品名称' },
+                    { field: 'materialCode', title: '物料编码', sortable: true },
+                    { field: 'materialName', title: '物料名称', sortable: true },
+                    { field: 'usageQty', title: '用量' },
+                    { field: 'createTime', title: '创建时间', sortable: true },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            return '<a class="btn btn-primary btn-xs" onclick="$.operate.editTab(\'' + r.bomId + '\')"><i class="fa fa-edit"></i>编辑</a> '
+                                + '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + r.bomId + '\')"><i class="fa fa-remove"></i>删除</a>';
+                        }
+                    }
+                ]
+            });
+        }
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+    </script>
+</body>
+</html>

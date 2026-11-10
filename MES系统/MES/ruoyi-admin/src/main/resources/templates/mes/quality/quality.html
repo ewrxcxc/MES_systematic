@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('质检管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>工单编号：<input type="text" name="workOrderNo"/></li>
+                <li>产品名称：<input type="text" name="productName"/></li>
+                <li>检验类型：<select name="checkType">
+                    <option value="">全部</option>
+                    <option value="来料检验">来料检验</option>
+                    <option value="过程检验">过程检验</option>
+                    <option value="成品检验">成品检验</option>
+                </select></li>
+                <li>检验结果：<select name="result">
+                    <option value="">全部</option>
+                    <option value="PASS">合格</option>
+                    <option value="FAIL">不合格</option>
+                </select></li>
+                <li>检验时间：<input type="text" name="params[beginTime]" class="time-input" data-type="date" data-format="yyyy-MM-dd" autocomplete="off" placeholder="开始"/> —
+                    <input type="text" name="params[endTime]" class="time-input" data-type="date" data-format="yyyy-MM-dd" autocomplete="off" placeholder="结束"/></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success btn-rounded" onclick="addRecord()"><i class="fa fa-plus"></i> 新增质检</a>
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()"><i class="fa fa-remove"></i> 删除</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/quality"; var apiPrefix = ctx + "api/mes/quality";
+        $(function() {
+            $.table.init({
+                url: apiPrefix + "/list", removeUrl: apiPrefix + "/delete",
+                createUrl: prefix + "/add", updateUrl: prefix + "/edit/{id}",
+                sortName: "createTime", sortOrder: "desc", striped: true, modalName: "质检记录",
+                columns: [
+                    { checkbox: true },
+                    { field: 'id', visible: false },
+                    { field: 'workOrderNo', title: '工单编号', sortable: true },
+                    { field: 'productName', title: '产品名称' },
+                    { field: 'checkType', title: '检验类型', align: 'center' },
+                    { field: 'quantity', title: '检验数量', align: 'center' },
+                    { field: 'defectQuantity', title: '不良数量', align: 'center' },
+                    { field: 'result', title: '质量状态', align: 'center',
+                        formatter: function(v) {
+                            if (!v) return '-';
+                            return v == 'PASS'
+                                ? '<span class="label label-success">合格</span>'
+                                : '<span class="label label-danger">不合格</span>';
+                        }
+                    },
+                    { field: 'inspector', title: '检验员', align: 'center' },
+                    { field: 'checkTime', title: '检验时间' },
+                    { field: 'createTime', title: '创建时间' },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            var btns = '<a class="btn btn-info btn-xs" onclick="editRecord(' + r.id + ')"><i class="fa fa-edit"></i> 编辑</a> ';
+                            btns += '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + r.id + '\')"><i class="fa fa-remove"></i> 删除</a>';
+                            return btns;
+                        }
+                    }
+                ]
+            });
+        });
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+        function addRecord() { $.modal.openTab("新增质检", prefix + "/add"); }
+        function editRecord(id) { $.modal.openTab("编辑质检", prefix + "/edit/" + id); }
+    </script>
+</body>
+</html>

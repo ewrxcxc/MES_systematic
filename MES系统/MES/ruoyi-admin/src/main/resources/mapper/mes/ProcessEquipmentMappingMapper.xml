@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.ProcessEquipmentMappingMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.ProcessEquipmentMapping" id="MappingResult">
+        <id property="id" column="id"/>
+        <result property="processCode" column="process_code"/>
+        <result property="processName" column="process_name"/>
+        <result property="processSeq" column="process_seq"/>
+        <result property="equipmentId" column="equipment_id"/>
+        <result property="equipmentCode" column="equipment_code"/>
+        <result property="equipmentName" column="equipment_name"/>
+        <result property="lineId" column="line_id"/>
+        <result property="apiUrl" column="api_url"/>
+        <result property="apiType" column="api_type"/>
+        <result property="status" column="status"/>
+        <result property="workCenter" column="work_center"/>
+        <result property="lineAction" column="line_action"/>
+        <result property="apiCommand" column="api_command"/>
+        <result property="responseTime" column="response_time"/>
+        <result property="lastCallTime" column="last_call_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <select id="selectMappingList" resultMap="MappingResult">
+        select * from mes_process_equipment_mapping
+        <where>
+            <if test="processCode != null and processCode != ''">and process_code like concat('%',#{processCode},'%')</if>
+            <if test="processName != null and processName != ''">and process_name like concat('%',#{processName},'%')</if>
+            <if test="equipmentName != null and equipmentName != ''">and equipment_name like concat('%',#{equipmentName},'%')</if>
+            <if test="workCenter != null and workCenter != ''">and work_center like concat('%',#{workCenter},'%')</if>
+            <if test="lineAction != null and lineAction != ''">and line_action like concat('%',#{lineAction},'%')</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by process_seq, id
+    </select>
+
+    <select id="selectByProcessCode" resultMap="MappingResult">
+        select * from mes_process_equipment_mapping where process_code = #{processCode} and status = 'ACTIVE'
+    </select>
+
+    <select id="selectByProcessSeq" resultMap="MappingResult">
+        select * from mes_process_equipment_mapping where process_seq = #{processSeq} and status = 'ACTIVE'
+    </select>
+
+    <select id="selectMappingById" resultMap="MappingResult">
+        select * from mes_process_equipment_mapping where id = #{id}
+    </select>
+
+    <insert id="insertMapping" useGeneratedKeys="true" keyProperty="id">
+        insert into mes_process_equipment_mapping(
+            <if test="processCode!=null and processCode!=''">process_code,</if>
+            <if test="processName!=null and processName!=''">process_name,</if>
+            <if test="processSeq!=null">process_seq,</if>
+            <if test="equipmentId!=null">equipment_id,</if>
+            <if test="equipmentCode!=null and equipmentCode!=''">equipment_code,</if>
+            <if test="equipmentName!=null and equipmentName!=''">equipment_name,</if>
+            <if test="lineId!=null">line_id,</if>
+            <if test="workCenter!=null and workCenter!=''">work_center,</if>
+            <if test="lineAction!=null and lineAction!=''">line_action,</if>
+            <if test="apiCommand!=null and apiCommand!=''">api_command,</if>
+            <if test="apiUrl!=null and apiUrl!=''">api_url,</if>
+            <if test="apiType!=null and apiType!=''">api_type,</if>
+            <if test="status!=null and status!=''">status,</if>
+            <if test="remark!=null and remark!=''">remark,</if>
+            <if test="createBy!=null and createBy!=''">create_by,</if>
+            create_time
+        ) values (
+            <if test="processCode!=null and processCode!=''">#{processCode},</if>
+            <if test="processName!=null and processName!=''">#{processName},</if>
+            <if test="processSeq!=null">#{processSeq},</if>
+            <if test="equipmentId!=null">#{equipmentId},</if>
+            <if test="equipmentCode!=null and equipmentCode!=''">#{equipmentCode},</if>
+            <if test="equipmentName!=null and equipmentName!=''">#{equipmentName},</if>
+            <if test="lineId!=null">#{lineId},</if>
+            <if test="workCenter!=null and workCenter!=''">#{workCenter},</if>
+            <if test="lineAction!=null and lineAction!=''">#{lineAction},</if>
+            <if test="apiCommand!=null and apiCommand!=''">#{apiCommand},</if>
+            <if test="apiUrl!=null and apiUrl!=''">#{apiUrl},</if>
+            <if test="apiType!=null and apiType!=''">#{apiType},</if>
+            <if test="status!=null and status!=''">#{status},</if>
+            <if test="remark!=null and remark!=''">#{remark},</if>
+            <if test="createBy!=null and createBy!=''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateMapping">
+        update mes_process_equipment_mapping <set>
+            <if test="processCode!=null">process_code=#{processCode},</if>
+            <if test="processName!=null">process_name=#{processName},</if>
+            <if test="processSeq!=null">process_seq=#{processSeq},</if>
+            <if test="equipmentId!=null">equipment_id=#{equipmentId},</if>
+            <if test="equipmentCode!=null">equipment_code=#{equipmentCode},</if>
+            <if test="equipmentName!=null">equipment_name=#{equipmentName},</if>
+            <if test="lineId!=null">line_id=#{lineId},</if>
+            <if test="workCenter!=null">work_center=#{workCenter},</if>
+            <if test="lineAction!=null">line_action=#{lineAction},</if>
+            <if test="apiCommand!=null">api_command=#{apiCommand},</if>
+            <if test="apiUrl!=null">api_url=#{apiUrl},</if>
+            <if test="apiType!=null">api_type=#{apiType},</if>
+            <if test="status!=null">status=#{status},</if>
+            <if test="remark!=null">remark=#{remark},</if>
+            <if test="updateBy!=null and updateBy!=''">update_by=#{updateBy},</if>
+            update_time=sysdate()
+        </set> where id=#{id}
+    </update>
+
+    <delete id="deleteMappingByIds">
+        delete from mes_process_equipment_mapping where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <update id="batchUpdateStatus">
+        update mes_process_equipment_mapping set status = #{status}, update_by = #{updateBy}, update_time = sysdate()
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </update>
+
+    <update id="updateResponseTime">
+        update mes_process_equipment_mapping set response_time = #{responseTime}, last_call_time = sysdate() where id = #{id}
+    </update>
+
+    <update id="refreshAllStatus">
+        update mes_process_equipment_mapping set response_time = null, last_call_time = null
+    </update>
+</mapper>

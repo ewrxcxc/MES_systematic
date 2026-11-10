@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MES 产线工序控制台</title>
+<style>
+  :root {
+    --bg: #1a1d23;
+    --panel: #21252b;
+    --border: #333842;
+    --text: #cdd2d8;
+    --text-dim: #6a7078;
+    --accent: #0099ff;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --orange: #f0a030;
+    --btn-bg: #282c34;
+    --btn-hover: #31363f;
+    --btn-active: #1a3a5c;
+    --log-bg: #181a1f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .console {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ====== 头部 ====== */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .header-title { font-size: 18px; font-weight: 700; letter-spacing: 1px; }
+  .header-title span { color: var(--accent); }
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .header-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .4; }
+  }
+
+  /* ====== 按钮网格 ====== */
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .cmd-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 18px 12px 14px;
+    background: var(--btn-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .15s;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+  .cmd-btn:hover {
+    background: var(--btn-hover);
+    border-color: #4a5058;
+    transform: translateY(-1px);
+  }
+  .cmd-btn:active {
+    background: var(--btn-active);
+    border-color: var(--accent);
+    transform: scale(.98);
+  }
+  .cmd-btn.running {
+    pointer-events: none;
+    opacity: .6;
+  }
+  .cmd-btn .action {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e0e4ea;
+    letter-spacing: .5px;
+  }
+  .cmd-btn .process {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .cmd-btn .idx {
+    position: absolute;
+    top: 6px; right: 10px;
+    font-size: 10px;
+    color: var(--text-dim);
+    opacity: .5;
+  }
+
+  /* ====== 状态指示 ====== */
+  .status-bar {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+    padding: 0 4px;
+  }
+  .status-bar b { color: var(--text); }
+
+  /* ====== 日志区 ====== */
+  .log-section { display: flex; flex-direction: column; gap: 10px; }
+
+  .log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .log-header h3 { font-size: 14px; color: var(--text-dim); letter-spacing: 1px; }
+  .log-header button {
+    background: var(--btn-bg);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all .15s;
+  }
+  .log-header button:hover { color: var(--text); border-color: #555; }
+
+  .log-box {
+    background: var(--log-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    height: 280px;
+    overflow-y: auto;
+    padding: 12px 16px;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", "Microsoft YaHei", monospace;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .log-box:empty::after {
+    content: "等待指令...";
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .log-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
+  .log-line .time { color: var(--text-dim); margin-right: 8px; }
+  .log-line .cmd { color: var(--accent); font-weight: 600; }
+  .log-line .ok { color: var(--green); }
+  .log-line .fail { color: var(--red); }
+  .log-line .warn { color: var(--orange); }
+
+  /* ====== 底部 ====== */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    opacity: .6;
+  }
+
+  /* ====== 滚动条 ====== */
+  .log-box::-webkit-scrollbar { width: 5px; }
+  .log-box::-webkit-scrollbar-track { background: transparent; }
+  .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="console">
+
+  <!-- 头部 -->
+  <div class="header">
+    <div class="header-title">MES <span>产线工序控制台</span></div>
+    <div class="header-status">
+      <div class="header-dot" id="statusDot"></div>
+      <span id="statusText">就绪</span>
+    </div>
+  </div>
+
+  <!-- 状态 -->
+  <div class="status-bar">
+    <span>总请求：<b id="countTotal">0</b></span>
+    <span>成功：<b id="countOk" style="color:var(--green)">0</b></span>
+    <span>失败：<b id="countFail" style="color:var(--red)">0</b></span>
+  </div>
+
+  <!-- 按钮区 -->
+  <div class="btn-grid" id="btnGrid"></div>
+
+  <!-- 日志区 -->
+  <div class="log-section">
+    <div class="log-header">
+      <h3>执行日志</h3>
+      <button onclick="clearLog()">清空</button>
+    </div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <div class="footer">MES Process Console &copy; 2026</div>
+
+</div>
+
+<script>
+  const PROCESSES = [
+    { seq: 1, process: '原材料领料', action: '启动初始化',     url: 'http://localhost:5000/WeatherForecast/command?commandname=start' },
+    { seq: 2, process: 'CNC加工',   action: '启动传送带',     url: 'http://localhost:5000/WeatherForecast/command?commandname=sendstart' },
+    { seq: 3, process: '打磨处理',   action: '停止传送带',     url: 'http://localhost:5000/WeatherForecast/command?commandname=sendstop' },
+    { seq: 4, process: '喷砂氧化',   action: '抓取盒子到平台', url: 'http://localhost:5000/WeatherForecast/command?commandname=startgrab' },
+    { seq: 5, process: '组装',       action: '抓取盒子到传送带', url: 'http://localhost:5000/WeatherForecast/command?commandname=startgrabBack' },
+    { seq: 6, process: '功能检测',   action: '开始打螺丝',     url: 'http://localhost:5000/WeatherForecast/command?commandname=startcrue' },
+    { seq: 7, process: '包装入库',   action: '开始激光打标',   url: 'http://localhost:5000/WeatherForecast/command?commandname=startlay' },
+  ];
+
+  var counts = { total: 0, ok: 0, fail: 0 };
+
+  function renderButtons() {
+    var html = '';
+    PROCESSES.forEach(function(p) {
+      html += '<div class="cmd-btn" onclick="callApi(this, \'' + p.process + '\', \'' + p.action + '\', \'' + p.url + '\')">'
+            +   '<span class="idx">' + String(p.seq).padStart(2,'0') + '</span>'
+            +   '<span class="action">' + p.action + '</span>'
+            +   '<span class="process">' + p.process + '</span>'
+            + '</div>';
+    });
+    document.getElementById('btnGrid').innerHTML = html;
+  }
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function now() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+         + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+
+  function setStatus(running) {
+    var dot = document.getElementById('statusDot');
+    var txt = document.getElementById('statusText');
+    if (running) {
+      dot.style.background = 'var(--orange)';
+      dot.style.animation = 'none';
+      txt.textContent = '执行中';
+    } else {
+      dot.style.background = 'var(--green)';
+      dot.style.animation = 'pulse 2s infinite';
+      txt.textContent = '就绪';
+    }
+  }
+
+  function updateCounts(ok) {
+    counts.total++;
+    if (ok) counts.ok++; else counts.fail++;
+    document.getElementById('countTotal').textContent = counts.total;
+    document.getElementById('countOk').textContent = counts.ok;
+    document.getElementById('countFail').textContent = counts.fail;
+  }
+
+  function writeLog(time, action, process, ok, detail) {
+    var box = document.getElementById('logBox');
+    var line = document.createElement('div');
+    line.className = 'log-line';
+    var statusClass = ok ? 'ok' : 'fail';
+    var statusText = ok ? '成功' : '失败';
+    var msg = detail || '';
+    line.innerHTML = '<span class="time">[' + time + ']</span>'
+                   + '执行：<span class="cmd">' + action + '</span>（' + process + '）'
+                   + ' &rarr; <span class="' + statusClass + '">' + statusText + '</span>'
+                   + (msg ? ' <span class="warn">' + msg + '</span>' : '');
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function callApi(btn, process, action, url) {
+    var time = now();
+    btn.classList.add('running');
+    setStatus(true);
+    writeLog(time, action, process, null, '请求中...');
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.timeout = 8000;
+
+    xhr.onload = function() {
+      btn.classList.remove('running');
+      setStatus(false);
+      // 移除"请求中"那条，写入最终结果
+      var box = document.getElementById('logBox');
+      box.removeChild(box.lastChild);
+
+      var ok = xhr.status >= 200 && xhr.status < 300;
+      var detail = '';
+      if (!ok) detail = 'HTTP ' + xhr.status;
+      updateCounts(ok);
+      writeLog(time, action, process, ok, detail);
+    };
+
+    xhr.onerror = function() {
+      btn.classList.remove('running');
+      setStatus(false);
+      var box = document.getElementById('logBox');
+      box.removeChild(box.lastChild);
+      updateCounts(false);
+      writeLog(time, action, process, false, '网络错误');
+    };
+
+    xhr.ontimeout = function() {
+      btn.classList.remove('running');
+      setStatus(false);
+      var box = document.getElementById('logBox');
+      box.removeChild(box.lastChild);
+      updateCounts(false);
+      writeLog(time, action, process, false, '超时');
+    };
+
+    xhr.send();
+  }
+
+  function clearLog() {
+    document.getElementById('logBox').innerHTML = '';
+    counts.total = counts.ok = counts.fail = 0;
+    document.getElementById('countTotal').textContent = '0';
+    document.getElementById('countOk').textContent = '0';
+    document.getElementById('countFail').textContent = '0';
+  }
+
+  renderButtons();
+</script>
+
+</body>
+</html>

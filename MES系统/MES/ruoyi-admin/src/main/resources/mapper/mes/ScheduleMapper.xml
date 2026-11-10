@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.ScheduleMapper">
+
+    <resultMap type="com.ruoyi.mes.domain.Schedule" id="ScheduleResult">
+        <id property="scheduleId" column="scheduler_id"/>
+        <result property="scheduleNo" column="schedule_no"/>
+        <result property="workOrderId" column="work_order_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="productName" column="product_name"/>
+        <result property="workOrderNo" column="work_order_no"/>
+        <result property="plannedStart" column="planned_start"/>
+        <result property="plannedEnd" column="planned_end"/>
+        <result property="priority" column="priority"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectScheduleVo">
+        select s.scheduler_id, s.schedule_no, s.work_order_id, w.work_order_no,
+               COALESCE(s.product_id, so.product_id) as product_id,
+               COALESCE(p.product_name, p2.product_name) as product_name,
+               s.planned_start, s.planned_end, s.priority, s.status,
+               s.remark, s.create_time, s.update_time
+        from schedule s
+        left join work_order w on w.work_order_id = s.work_order_id
+        left join sales_order so on so.order_id = w.order_id
+        left join product p on p.product_id = s.product_id
+        left join product p2 on p2.product_id = so.product_id
+    </sql>
+
+    <select id="selectScheduleList" parameterType="com.ruoyi.mes.domain.Schedule" resultMap="ScheduleResult">
+        <include refid="selectScheduleVo"/>
+        <where>
+            <if test="scheduleNo != null and scheduleNo != ''">and s.schedule_no like concat('%',#{scheduleNo},'%')</if>
+            <if test="workOrderId != null">and s.work_order_id = #{workOrderId}</if>
+            <if test="productId != null">and s.product_id = #{productId}</if>
+            <if test="status != null and status != ''">and s.status = #{status}</if>
+        </where>
+        order by s.scheduler_id desc
+    </select>
+
+    <select id="selectScheduleById" parameterType="Long" resultMap="ScheduleResult">
+        <include refid="selectScheduleVo"/> where s.scheduler_id = #{scheduleId}
+    </select>
+
+    <insert id="insertSchedule" parameterType="com.ruoyi.mes.domain.Schedule" useGeneratedKeys="true" keyProperty="scheduleId">
+        insert into schedule(
+            <if test="scheduleNo != null and scheduleNo != ''">schedule_no,</if>
+            <if test="workOrderId != null">work_order_id,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="plannedStart != null">planned_start,</if>
+            <if test="plannedEnd != null">planned_end,</if>
+            <if test="priority != null">priority,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="scheduleNo != null and scheduleNo != ''">#{scheduleNo},</if>
+            <if test="workOrderId != null">#{workOrderId},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="plannedStart != null">#{plannedStart},</if>
+            <if test="plannedEnd != null">#{plannedEnd},</if>
+            <if test="priority != null">#{priority},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateSchedule" parameterType="com.ruoyi.mes.domain.Schedule">
+        update schedule
+        <set>
+            <if test="workOrderId != null">work_order_id = #{workOrderId},</if>
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="plannedStart != null">planned_start = #{plannedStart},</if>
+            <if test="plannedEnd != null">planned_end = #{plannedEnd},</if>
+            <if test="priority != null">priority = #{priority},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where scheduler_id = #{scheduleId}
+    </update>
+
+    <delete id="deleteScheduleByIds">
+        delete from schedule where scheduler_id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+</mapper>

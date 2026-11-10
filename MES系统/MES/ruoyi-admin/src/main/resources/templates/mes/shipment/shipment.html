@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('发货管理')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="search-form"><div class="select-list"><ul>
+                <li>发货单号：<input type="text" name="shipmentNo"/></li>
+                <li>快递公司：<input type="text" name="expressCompany"/></li>
+                <li><a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                    <a class="btn btn-default btn-rounded btn-sm" onclick="resetForm()"><i class="fa fa-refresh"></i>&nbsp;重置</a></li>
+            </ul></div></form>
+        </div>
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success btn-rounded" onclick="$.operate.addTab()"><i class="fa fa-plus"></i> 新增发货</a>
+            <a class="btn btn-danger btn-rounded multiple disabled" onclick="$.operate.removeAll()"><i class="fa fa-remove"></i> 删除</a>
+        </div>
+        <div class="col-sm-12 select-table table-striped"><table id="bootstrap-table"></table></div>
+    </div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/shipment"; var apiPrefix = ctx + "api/mes/shipment";
+        $(function() { queryList(); });
+        function queryList() {
+            $.table.init({
+                url: apiPrefix + "/list", createUrl: prefix + "/add",
+                removeUrl: apiPrefix + "/delete", sortName: "shipmentTime", sortOrder: "desc", striped: true, modalName: "发货",
+                columns: [
+                    { checkbox: true },
+                    { field: 'shipmentId', title: 'ID', visible: false },
+                    { field: 'shipmentNo', title: '发货单号', sortable: true },
+                    { field: 'orderNo', title: '销售订单' },
+                    { field: 'customerName', title: '客户' },
+                    { field: 'productName', title: '产品' },
+                    { field: 'expressCompany', title: '快递公司' },
+                    { field: 'trackingNo', title: '物流单号' },
+                    { field: 'shipmentQty', title: '发货数量' },
+                    { field: 'status', title: '发货状态', align: 'center',
+                        formatter: function(v) {
+                            return '<span class="label label-success">' + (v || '已发货') + '</span>';
+                        }
+                    },
+                    { field: 'shipmentTime', title: '发货时间', sortable: true },
+                    { title: '操作', align: 'center',
+                        formatter: function(v, r) {
+                            return '<a class="btn btn-danger btn-xs" onclick="$.operate.remove(\'' + r.shipmentId + '\')"><i class="fa fa-remove"></i>删除</a>';
+                        }
+                    }
+                ]
+            });
+        }
+        function resetForm() { $("#search-form")[0].reset(); $.table.search(); }
+    </script>
+</body>
+</html>

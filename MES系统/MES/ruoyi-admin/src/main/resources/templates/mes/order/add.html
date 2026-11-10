@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head><th:block th:include="include :: header('销售订单')" /></head>
+<body class="gray-bg">
+    <div class="container-div"><div class="row"><div class="col-sm-12">
+        <form id="edit-form" class="form-horizontal" style="padding:0;">
+            <input type="hidden" name="orderId" id="orderId"/>
+            <div class="form-card">
+                <div class="form-card-header">基础信息</div>
+                <div class="form-card-body">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">订单编号：</label>
+                <div class="col-sm-4"><input type="text" name="orderNo" class="form-control" placeholder="自动生成" readonly/></div>
+                <label class="col-sm-2 control-label">客户：</label>
+                <div class="col-sm-4"><select name="customerId" class="form-control" required><option value="">请选择客户</option></select></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">产品：</label>
+                <div class="col-sm-4"><select name="productId" class="form-control" required><option value="">请选择产品</option></select></div>
+                <label class="col-sm-2 control-label">数量：</label>
+                <div class="col-sm-4"><input type="number" name="quantity" class="form-control" required placeholder="请输入订单数量"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">交货日期：</label>
+                <div class="col-sm-4"><input type="date" name="dueDate" class="form-control"/></div>
+                <label class="col-sm-2 control-label">是否紧急订单：</label>
+                <div class="col-sm-4">
+                    <label class="checkbox-inline" style="padding-top:7px;">
+                        <input type="checkbox" name="isUrgent" value="1" id="isUrgentCheck"/> 紧急插单（优先级最高，自动排到最前面）
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">收货人：</label>
+                <div class="col-sm-4"><input type="text" name="consignee" class="form-control"/></div>
+                <label class="col-sm-2 control-label">联系电话：</label>
+                <div class="col-sm-4"><input type="text" name="consigneePhone" class="form-control"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">收货地址：</label>
+                <div class="col-sm-10"><input type="text" name="deliveryAddress" class="form-control"/></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">备注：</label>
+                <div class="col-sm-10"><textarea name="remark" class="form-control" rows="3"></textarea></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i> 确认保存</button>
+                    <button type="button" class="btn btn-default" onclick="resetForm()"><i class="fa fa-refresh"></i> 重置</button>
+                    <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消返回</button>
+                </div>
+                <div style="margin-top:10px;font-size:12px;color:#909399;">
+                    <i class="fa fa-info-circle"></i> 保存后将自动生成生产计划
+                </div>
+        </form>
+    </div></div></div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var prefix = ctx + "mes/order"; var apiPrefix = ctx + "api/mes/order";
+        var orderId = [[${orderId}]];
+        $(function() {
+            // 加载客户下拉
+            $.post(ctx + "api/mes/customer/list", {pageSize: 999}, function(res) {
+                if (res.code == 0) $(res.rows).each(function(i, p) {
+                    var label = p.customerName + ' (' + (p.customerPriority == 1 ? 'A级' : (p.customerPriority == 2 ? 'B级' : 'C级')) + ')';
+                    $("#edit-form [name='customerId']").append('<option value="' + p.customerId + '">' + label + '</option>');
+                });
+            });
+            // 加载产品下拉
+            $.post(ctx + "api/mes/product/list", {pageSize: 999}, function(res) {
+                if (res.code == 0) $(res.rows).each(function(i, p) { $("#edit-form [name='productId']").append('<option value="' + p.productId + '">' + p.productName + '</option>'); });
+            });
+            if (orderId) loadData();
+        });
+        function loadData() {
+            $.get(apiPrefix + "/" + orderId, function(res) {
+                if (res.code == 0) {
+                    var data = res.data;
+                    $.each(data, function(k, v) {
+                        if (k == 'isUrgent') {
+                            if (v == 1) $('#isUrgentCheck').prop('checked', true);
+                        } else {
+                            $("#edit-form [name='" + k + "']").val(v);
+                        }
+                    });
+                }
+            });
+        }
+        function submitHandler() {
+            // 验证必填项
+            var customerId = $("#edit-form [name='customerId']").val();
+            var productId = $("#edit-form [name='productId']").val();
+            var quantity = $("#edit-form [name='quantity']").val();
+            if (!customerId) { $.modal.alertWarning("请选择客户"); return; }
+            if (!productId) { $.modal.alertWarning("请选择产品"); return; }
+            if (!quantity || quantity <= 0) { $.modal.alertWarning("请输入有效数量"); return; }
+
+            $.modal.confirm("确定提交此销售订单？<br><small class='text-muted'>将自动执行：保存订单 → 生成生产计划（待审核）</small>", function() {
+                var data = {};
+                $("#edit-form").serializeArray().forEach(function(item) {
+                    if (item.name == 'isUrgent') {
+                        data[item.name] = $('#isUrgentCheck').is(':checked') ? 1 : 0;
+                    } else {
+                        data[item.name] = item.value;
+                    }
+                });
+                if (orderId) {
+                    data.orderId = orderId;
+                    $.operate.save(apiPrefix + "/update", data);
+                } else {
+                    $.operate.save(apiPrefix + "/create", data);
+                }
+            });
+        }
+        function resetForm() { $("#edit-form")[0].reset(); $('#isUrgentCheck').prop('checked', false); }
+        function cancelHandler() {
+            $.modal.confirm("确定取消吗？未保存的数据将丢失。", function() {
+                $.modal.close();
+                history.back();
+            });
+        }
+    </script>
+</body>
+</html>

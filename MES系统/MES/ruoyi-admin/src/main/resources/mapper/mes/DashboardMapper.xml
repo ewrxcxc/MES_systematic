@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mes.mapper.DashboardMapper">
+
+    <select id="countTodayOrders" resultType="java.lang.Long">
+        SELECT count(*) FROM work_order WHERE date(create_time) = curdate()
+    </select>
+
+    <select id="countTodayFinished" resultType="java.lang.Long">
+        SELECT count(*) FROM work_order WHERE status='FINISHED' AND date(update_time) = curdate()
+    </select>
+
+    <select id="countRunningOrders" resultType="java.lang.Long">
+        SELECT count(*) FROM work_order WHERE status='RUNNING'
+    </select>
+
+    <select id="getTodayYield" resultType="java.util.Map">
+        SELECT COALESCE(sum(good_qty),0) as good, COALESCE(sum(bad_qty),0) as bad
+        FROM production_report WHERE date(report_time) = curdate()
+    </select>
+
+    <select id="countLowStock" resultType="java.lang.Long">
+        SELECT count(*) FROM inventory WHERE quantity &lt; 100
+    </select>
+
+    <select id="sumTodayShipments" resultType="java.lang.Long">
+        SELECT COALESCE(sum(shipment_qty),0) FROM shipment_record WHERE date(shipment_time) = curdate()
+    </select>
+
+    <select id="countRunningEquip" resultType="java.lang.Long">
+        SELECT count(*) FROM equipment WHERE status='RUNNING'
+    </select>
+
+    <select id="countTotalEquip" resultType="java.lang.Long">
+        SELECT count(*) FROM equipment
+    </select>
+
+    <select id="getOrderStatusGroup" resultType="java.util.Map">
+        SELECT status, count(*) as cnt FROM work_order GROUP BY status ORDER BY status
+    </select>
+
+    <select id="getEquipStatusGroup" resultType="java.util.Map">
+        SELECT status, count(*) as cnt FROM equipment GROUP BY status ORDER BY status
+    </select>
+
+    <select id="getInventoryTypeStats" resultType="java.util.Map">
+        SELECT inventory_type, sum(quantity) as total_qty FROM inventory GROUP BY inventory_type
+    </select>
+
+    <select id="getYieldTrend7Days" resultType="java.util.Map">
+        SELECT date(report_time) as dt, sum(good_qty) as good, sum(bad_qty) as bad
+        FROM production_report
+        WHERE report_time >= date_sub(curdate(), interval 7 day)
+        GROUP BY date(report_time) ORDER BY dt
+    </select>
+
+    <select id="getWorkOrderTrend7Days" resultType="java.util.Map">
+        SELECT date(create_time) as dt, count(*) as cnt
+        FROM work_order
+        WHERE create_time >= date_sub(curdate(), interval 7 day)
+        GROUP BY date(create_time) ORDER BY dt
+    </select>
+
+    <select id="getLowStockTop10" resultType="java.util.Map">
+        SELECT material_name as name, quantity as value
+        FROM inventory WHERE quantity &lt; 100
+        ORDER BY quantity ASC LIMIT 10
+    </select>
+
+    <select id="getQualityPassRate" resultType="java.util.Map">
+        SELECT
+            COALESCE(SUM(CASE WHEN result = 'PASS' THEN 1 ELSE 0 END), 0) AS pass_count,
+            COALESCE(COUNT(*), 0) AS total_count
+        FROM mes_quality_record
+        WHERE check_time IS NOT NULL
+    </select>
+
+    <select id="getWorkOrderCompletionRate" resultType="java.util.Map">
+        SELECT
+            (SELECT COALESCE(COUNT(*), 0) FROM work_order WHERE status = 'FINISHED') AS finished_count,
+            (SELECT COALESCE(COUNT(*), 0) FROM work_order) AS total_count
+        FROM DUAL
+    </select>
+
+</mapper>
